@@ -2,12 +2,17 @@ package auth
 
 import (
 	"context"
+	"github.com/r2day/collections"
 )
 
 // SimpleAuth 基本类型
 type SimpleAuth struct {
 	// 键管理
 	Key BasicKey `json:"key"`
+	// 应用列表
+	Apps []*AppModel `json:"apps"`
+	// 角色配置
+	RoleParam RoleParams `json:"role_param"`
 }
 
 // BasicKey 缓存键
@@ -23,6 +28,18 @@ type BasicKey struct {
 	Path2Name string `json:"path_2_name"`
 	// 是否隐藏
 	Hide string `json:"hide"`
+}
+
+type RoleParams struct {
+	// 顶部工具栏,创建、导出、上传
+	ToolBar int `json:"tool_bar"`
+	// 最大可入级别 1~9
+	MaxAccessLevel int `json:"max_access_level"`
+	// 角色名称列表
+	// 用户登陆后，需要显示当前自己的角色
+	RoleNameList []string `json:"role_name_list"`
+	// 权限列表
+	Permissions []PermissionsModel `json:"permissions"`
 }
 
 const (
@@ -49,7 +66,7 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 }
 
 // recordKeys 记录关联keys
-func (a *SimpleAuth) recordKeys(ctx context.Context, accountID string) error {
+func (a *SimpleAuth) recordKeys(ctx context.Context) error {
 	// 将key 记录下来以便退出的时候进行删除
 	err := RDB.SAdd(ctx, a.Key.Keys, a.Key.Operation).Err()
 	if err != nil {
@@ -70,11 +87,90 @@ func (a *SimpleAuth) recordKeys(ctx context.Context, accountID string) error {
 }
 
 // SignIn 登陆
+// 在密码与账号验证通过后调用该接口进行权限校验登陆
+// 会将当前账号的权限与角色以及所有接口的具体操作权写入到redis中
 func (a *SimpleAuth) SignIn(ctx context.Context, accountID string) error {
-	err := a.recordKeys(ctx, accountID)
+	err := a.recordKeys(ctx)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// LoadRoles 加载角色
+// 客户自行实现角色与账号的关联
+// 角色信息会被加载到redis中
+func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel) *SimpleAuth {
+	// 显示工具栏: 创建、导出、上传
+	toolBar := 0
+	maxAccessLevel := 0
+	rolesName := make([]string, 0)
+	// 权限列表
+	permissions := make([]PermissionsModel, 0)
+
+	for _, role := range roles {
+
+		// 角色状态不可用
+		if !role.Meta.Status {
+			break
+		}
+
+		// 选择最大的权限，决定是否展示状态栏
+		// 权限越大，展示的功能越多
+		if role.Toolbar > toolBar {
+			toolBar = role.Toolbar
+		}
+
+		// 将所有角色下的接口的权限管理进行统一管理
+		permissions = append(permissions, role.Permissions...)
+
+		// 加入key
+		// 以便退出登陆后删除
+		rolesName = append(rolesName, role.Name)
+
+		// 遍历寻找最大的用户角色等级
+		if role.Meta.AccessLevel > uint(maxAccessLevel) {
+			maxAccessLevel = int(role.Meta.AccessLevel)
+		}
+
+		// 将处理好的角色名称也加入到缓存中
+		// 使用角色id 避免用户输入特殊字符无法作为redis key
+		err := RDB.SAdd(ctx, a.Key.Roles, role.ID.Hex()).Err()
+		if err != nil {
+			continue
+		}
+
+		accessAPIList := make([]collections.APIInfo, 0)
+		// 遍历所有授权的应用
+		for _, app := range a.Apps {
+			// 获得所有应用下的api列表
+			accessAPIList = append(accessAPIList, app.AccessAPI...)
+		}
+		// setMenu(c, accessAPIList, keyPrefix, err, keyNames, path2roles, role)
+
+	}
+
+	rp := RoleParams{
+		ToolBar:        toolBar,
+		MaxAccessLevel: maxAccessLevel,
+		RoleNameList:   rolesName,
+		Permissions:    permissions,
+	}
+	a.RoleParam = rp
+	return a
+}
+
+// LoadApps 加载应用
+// 客户自行实现角色与账号的关联
+// 角色信息会被加载到redis中
+func (a *SimpleAuth) LoadApps(ctx context.Context, apps []*AppModel) error {
+	a.Apps = apps
+	return nil
+}
+
+// Access 返回目录列表
+// 管理台根据返回的数据决定是否显示在导航栏
+func (a *SimpleAuth) Access(ctx context.Context) error {
 	return nil
 }
 

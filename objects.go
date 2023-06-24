@@ -42,12 +42,6 @@ type RoleModel struct {
 	Meta auth.MetaModel `json:"meta" bson:"meta"`
 	// 名称
 	Name string `json:"name" bson:"name"`
-	// 描述
-	Desc string `json:"desc" bson:"desc"`
-	// 分类/ 亦或则是分组等
-	Category string `json:"category" bson:"category"`
-	// 图片
-	Image string `json:"image" bson:"image"`
 	// 工具列表
 	Toolbar int `json:"toolbar" bson:"toolbar"`
 	// 应用列表 toolbar
@@ -60,17 +54,6 @@ type RoleModel struct {
 
 // AppModel 模型
 type AppModel struct {
-	// 基本的数据库模型字段，一般情况所有model都应该包含如下字段
-	// 创建时（用户上传的数据为空，所以默认可以不传该值)
-	ID primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	// 基本的数据库模型字段，一般情况所有model都应该包含如下字段
-	Meta auth.MetaModel `json:"meta" bson:"meta"`
-	// 名称
-	Name string `json:"name" bson:"name"`
-	// 应用描述
-	Desc string `json:"desc" bson:"desc"`
-	// 分类/ 亦或则是分组等
-	Category string `json:"category" bson:"category"`
 	// AccessApi 可访问的api列表
 	AccessAPI []collections.APIInfo `json:"access_api"  bson:"access_api"`
 }
