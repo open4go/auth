@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/r2day/collections"
+	"github.com/r2day/db"
+	log "github.com/sirupsen/logrus"
 )
 
 // SimpleAuth 基本类型
@@ -13,6 +16,8 @@ type SimpleAuth struct {
 	Apps []*AppModel `json:"apps"`
 	// 角色配置
 	RoleParam RoleParams `json:"role_param"`
+
+	Path2Roles map[string][]string `json:"path_2_roles"`
 }
 
 // BasicKey 缓存键
@@ -28,8 +33,13 @@ type BasicKey struct {
 	Path2Name string `json:"path_2_name"`
 	// 是否隐藏
 	Hide string `json:"hide"`
+	// path_access
+	PathAccess string `json:"path_access"`
+	//	role2paths
+	Role2Paths string `json:"role2paths"`
 }
 
+// RoleParams 角色参数
 type RoleParams struct {
 	// 顶部工具栏,创建、导出、上传
 	ToolBar int `json:"tool_bar"`
@@ -56,11 +66,13 @@ func (a *SimpleAuth) LoadConfig() {
 func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	keyPrefix := authPrefixKey + "_" + accountID
 	a.Key = BasicKey{
-		Keys:      keyPrefix + "_" + "keys",
-		Roles:     keyPrefix + "_" + "roles",
-		Operation: keyPrefix + "_" + "operations",
-		Path2Name: keyPrefix + "_" + "path2name",
-		Hide:      keyPrefix + "_" + "hide",
+		Keys:       keyPrefix + "_" + "keys",
+		Roles:      keyPrefix + "_" + "roles",
+		Operation:  keyPrefix + "_" + "operations",
+		Path2Name:  keyPrefix + "_" + "path2name",
+		Hide:       keyPrefix + "_" + "hide",
+		PathAccess: keyPrefix + "_" + "path_access",
+		Role2Paths: keyPrefix + "_" + "role2paths",
 	}
 	return a
 }
@@ -74,6 +86,27 @@ func (a *SimpleAuth) recordKeys(ctx context.Context) error {
 	}
 	// 将key 记录下来以便退出的时候进行删除
 	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
+	if err != nil {
+		return err
+	}
+	// 将key 记录下来以便退出的时候进行删除
+	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Roles).Err()
+	if err != nil {
+		return err
+	}
+	// 将key 记录下来以便退出的时候进行删除
+	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Hide).Err()
+	if err != nil {
+		return err
+	}
+
+	// 将key 记录下来以便退出的时候进行删除
+	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.PathAccess).Err()
+	if err != nil {
+		return err
+	}
+	// 将key 记录下来以便退出的时候进行删除
+	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Role2Paths).Err()
 	if err != nil {
 		return err
 	}
@@ -147,7 +180,6 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel) *SimpleA
 			accessAPIList = append(accessAPIList, app.AccessAPI...)
 		}
 		// setMenu(c, accessAPIList, keyPrefix, err, keyNames, path2roles, role)
-
 	}
 
 	rp := RoleParams{
@@ -168,9 +200,100 @@ func (a *SimpleAuth) LoadApps(ctx context.Context, apps []*AppModel) error {
 	return nil
 }
 
-// Access 返回目录列表
+// SetAccess 返回目录列表
 // 管理台根据返回的数据决定是否显示在导航栏
-func (a *SimpleAuth) Access(ctx context.Context) error {
+func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInfo, roleID string) error {
+	path2roles := make(map[string][]string, 0)
+	for _, apiInfo := range apiList {
+		// 默认是false
+		// 如果是true则忽略本条规则
+		if apiInfo.Disable {
+			continue
+		}
+
+		err := RDB.HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
+		if err != nil {
+			continue
+		}
+
+		// 判断是否需要在导航menu中展示
+		// 部分接口列表access和profile 是在个人中心展示的
+		// 所以需要设置为true
+		if apiInfo.HideOnSidebar {
+			err = RDB.HSet(ctx, a.Key.Hide, apiInfo.Path, true).Err()
+			if err != nil {
+				continue
+			}
+		}
+
+		path2roles[apiInfo.Path] = append(path2roles[apiInfo.Path], roleID)
+		log.WithField("can_view_detail", apiInfo.CanViewDetail).Debug("check api info")
+		// 如果开启
+		if apiInfo.CanViewDetail {
+			pathForDetail := apiInfo.Path + "/:_id"
+			path2roles[pathForDetail] = append(path2roles[pathForDetail], roleID)
+		}
+	}
+	a.Path2Roles = path2roles
+	return nil
+}
+
+// canAccessApi 设定用户对api的最终可访问信息
+// 仅当其设定了key value后才能进行访问
+// 中间件会检测redis中是否设定了该key
+// 与角色绑定
+func (a *SimpleAuth) Access(ctx context.Context, accountID string, config map[string][]string) error {
+	// 定义角色-> 路径列表
+	roles2paths := make(map[string][]string)
+
+	//// 加载默认可以开放的接口配置
+	//// config["admin"] = append(config["admin"], "/v1/auth/merchant/signin")
+	//// user_1 是hash key，username 是字段名, 是字段值
+	//// key := accessKeyPrefix + accountId
+	//keyPrefix := middle.AccessKeyPrefix + "_" + accountID
+	//keyNames := keyPrefix + "_" + "names"
+	//// 仅进行路径的请求访问权限校验
+	//pathAccessKey := keyPrefix + "_" + "path_access"
+	//// 将key 记录下来以便退出的时候进行删除
+	//err := db.RDB.SAdd(ctx, keyNames, pathAccessKey).Err()
+	//if err != nil {
+	//	return err
+	//}
+
+	for path, roles := range config {
+		for _, role := range roles {
+			// api访问控制key
+			//key := keyPrefix + "_" + path
+			//key := AccessKeyPrefix + "_" + accountID + "_" + path
+			pathWithRole := path + "_" + role
+			err := RDB.HSet(ctx, a.Key.PathAccess, pathWithRole, true).Err()
+			if err != nil {
+				return err
+			}
+			roles2paths[role] = append(roles2paths[role], path)
+		}
+	}
+
+	log.WithField("roles2paths", roles2paths).Debug("check the roles to paths")
+
+	// 加载访问控制信息到redis中
+	// 以便access及中间件完成check
+	for role, paths := range roles2paths {
+		pathsStr, err := json.Marshal(paths)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		err = db.RDB.HSet(ctx, a.Key.Role2Paths, role, pathsStr).Err()
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
+	// 判断是否存在如下key，否则报错
+	// access_key_prefix_AC1657016915941396480_/v1/affiliate/membership_<role_id>_read true
+
 	return nil
 }
 
