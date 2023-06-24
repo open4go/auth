@@ -54,7 +54,6 @@ type RoleParams struct {
 
 const (
 	authPrefixKey = "auth_basic_"
-	tokenKey      = "TOKEN_KEY"
 )
 
 // LoadConfig 加载配置
@@ -179,7 +178,10 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel) *SimpleA
 			// 获得所有应用下的api列表
 			accessAPIList = append(accessAPIList, app.AccessAPI...)
 		}
-		// setMenu(c, accessAPIList, keyPrefix, err, keyNames, path2roles, role)
+		err = a.SetAccess(ctx, accessAPIList, role.ID.Hex())
+		if err != nil {
+			continue
+		}
 	}
 
 	rp := RoleParams{
@@ -238,7 +240,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 	return nil
 }
 
-// canAccessApi 设定用户对api的最终可访问信息
+// Access 设定用户对api的最终可访问信息
 // 仅当其设定了key value后才能进行访问
 // 中间件会检测redis中是否设定了该key
 // 与角色绑定
@@ -246,25 +248,14 @@ func (a *SimpleAuth) Access(ctx context.Context, accountID string, config map[st
 	// 定义角色-> 路径列表
 	roles2paths := make(map[string][]string)
 
-	//// 加载默认可以开放的接口配置
-	//// config["admin"] = append(config["admin"], "/v1/auth/merchant/signin")
-	//// user_1 是hash key，username 是字段名, 是字段值
-	//// key := accessKeyPrefix + accountId
-	//keyPrefix := middle.AccessKeyPrefix + "_" + accountID
-	//keyNames := keyPrefix + "_" + "names"
-	//// 仅进行路径的请求访问权限校验
-	//pathAccessKey := keyPrefix + "_" + "path_access"
-	//// 将key 记录下来以便退出的时候进行删除
-	//err := db.RDB.SAdd(ctx, keyNames, pathAccessKey).Err()
-	//if err != nil {
-	//	return err
-	//}
+	// 加载默认可以开放的接口配置
+	// config["admin"] = append(config["admin"], "/v1/auth/merchant/signin")
+	// user_1 是hash key，username 是字段名, 是字段值
+	// key := accessKeyPrefix + accountId
 
 	for path, roles := range config {
 		for _, role := range roles {
 			// api访问控制key
-			//key := keyPrefix + "_" + path
-			//key := AccessKeyPrefix + "_" + accountID + "_" + path
 			pathWithRole := path + "_" + role
 			err := RDB.HSet(ctx, a.Key.PathAccess, pathWithRole, true).Err()
 			if err != nil {
