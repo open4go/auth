@@ -3,16 +3,15 @@ package auth
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/r2day/collections"
-	"github.com/r2day/collections/capp"
-	"github.com/r2day/db"
+	log "github.com/sirupsen/logrus"
 )
 
 // 遍历账号中所拥有的所有Roles
 // 1. 通过角色找到其应用列表，并且决定是否显示其在导航menu上或者是否禁用api
 // 2. 通过permissions 找到每一个接口的具体操作方法，是否具备相关操作权限
-func iterRoles(c *gin.Context, roles []*crole.Model, logCtx *log.Entry, permissions []crole.PermissionsModel,
+func iterRoles(c *gin.Context, roles []*RoleModel, logCtx *log.Entry, permissions []PermissionsModel,
 	rolesName []string, maxAccessLevel int, myRolesKey string, keyPrefix string, keyNames string,
-	path2roles map[string][]string) ([]string, []crole.PermissionsModel, int, int) {
+	path2roles map[string][]string) ([]string, []PermissionsModel, int, int) {
 	toolBar := 0
 	for _, role := range roles {
 
@@ -39,17 +38,17 @@ func iterRoles(c *gin.Context, roles []*crole.Model, logCtx *log.Entry, permissi
 		}
 
 		// 获取当前用户角色的应用列表
-		appM := &capp.Model{}
-		apps, err := appM.GetMany(c.Request.Context(), role.Apps)
-		if err != nil {
-			logCtx.WithField("role", role.Name).WithField("apps", apps).
-				Warning("no found any apps, try next role")
-			continue
-		}
+		//appM := &AppModel{}
+		//apps, err := appM.GetMany(c.Request.Context(), role.Apps)
+		//if err != nil {
+		//	logCtx.WithField("role", role.Name).WithField("apps", apps).
+		//		Warning("no found any apps, try next role")
+		//	continue
+		//}
 
 		// 将处理好的角色名称也加入到缓存中
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
-		err = db.RDB.SAdd(c.Request.Context(), myRolesKey, role.ID.Hex()).Err()
+		err = RDB.SAdd(c.Request.Context(), myRolesKey, role.ID.Hex()).Err()
 		if err != nil {
 			logCtx.Error(err)
 			continue
@@ -63,7 +62,7 @@ func iterRoles(c *gin.Context, roles []*crole.Model, logCtx *log.Entry, permissi
 			accessAPIList = append(accessAPIList, app.AccessAPI...)
 		}
 
-		setMenu(c, accessAPIList, keyPrefix, err, logCtx, keyNames, path2roles, role)
+		//setMenu(c, accessAPIList, keyPrefix, err, logCtx, keyNames, path2roles, role)
 
 	}
 

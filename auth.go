@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-
-	"github.com/r2day/db"
 )
 
 // SimpleAuth 基本类型
@@ -58,7 +56,7 @@ func (a *SimpleAuth) recordKeys(ctx context.Context, accountID string) error {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
-	err = db.RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
+	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
 	if err != nil {
 		return err
 	}
