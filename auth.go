@@ -6,6 +6,7 @@ import (
 	"github.com/r2day/collections"
 	"github.com/r2day/db"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 // SimpleAuth 基本类型
@@ -192,6 +193,24 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel) *SimpleA
 	}
 	a.RoleParam = rp
 	return a
+}
+
+// Verify 加载应用
+// 客户自行实现角色与账号的关联
+// 角色信息会被加载到redis中
+func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int {
+	// 检测角色是否有权限
+	isAccess := CanAccess(ctx, a.Key.Roles, path, a.Key.PathAccess)
+	if !isAccess {
+		return http.StatusForbidden
+	}
+
+	// 检测账号是否有操作权限
+	isCanDo := CRUD(ctx, path, a.Key.Operation, method)
+	if !isCanDo {
+		return http.StatusForbidden
+	}
+	return http.StatusOK
 }
 
 // LoadApps 加载应用
