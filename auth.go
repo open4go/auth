@@ -23,7 +23,7 @@ type BasicKey struct {
 	Operation string `json:"operation"`
 	// 操作
 	Path2Name string `json:"path_2_name"`
-	// 是否隐藏
+	// 类型 hash 是否隐藏
 	Hide string `json:"hide"`
 }
 
