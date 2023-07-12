@@ -15,13 +15,13 @@ func Demo() {
 	sa = sa.BindKey(demoAccountID)
 	// 查询用户账号
 	// 通过手机号查询数据库信息
-	err := sa.SignIn(context.TODO(), demoAccountID)
+	err := sa.SignIn(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// 读取角色列表
-
+	//sa.LoadRoles()
 	//	读取应用列表
 
 }
