@@ -80,7 +80,49 @@ func (a *SimpleAuth) LoadConfig() {
 
 }
 
-func (a *SimpleAuth) GetMyRoles() []string {
+func (a *SimpleAuth) HideMe(ctx context.Context, path string) bool {
+	needToHideMe, err := RDB.HGet(ctx, a.Key.Hide, path).Result()
+	if err != nil {
+		return false
+	}
+
+	if needToHideMe == "1" {
+		return true
+	}
+	return false
+}
+
+func (a *SimpleAuth) GetAllowPaths(ctx context.Context) []string {
+	paths := make([]string, 0)
+	myRoles := a.GetMyRoles(ctx)
+
+	for _, role := range myRoles {
+		tmpPaths := make([]string, 0)
+		// user_1 是hash key，username 是字段名, tizi365是字段值
+		secondKey, err := RDB.HGet(ctx, a.Key.Role2Paths, role).Result()
+		if err != nil {
+			log.WithField("secondKey", secondKey).Error(err)
+			continue
+		}
+		tmpPaths, err = RDB.SMembers(ctx, secondKey).Result()
+		if err != nil {
+			log.WithField("tmpPaths secondKey", secondKey).Error(err)
+			continue
+		}
+		paths = append(paths, tmpPaths...)
+	}
+	return paths
+}
+
+func (a *SimpleAuth) GetMyRoles(ctx context.Context) []string {
+	roles, err := RDB.HGetAll(ctx, a.Key.Role2Paths).Result()
+	if err != nil {
+		log.Error(err)
+		return a.MyRoles
+	}
+	for role, _ := range roles {
+		a.MyRoles = append(a.MyRoles, role)
+	}
 	return a.MyRoles
 }
 
