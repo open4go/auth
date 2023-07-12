@@ -6,11 +6,7 @@ import (
 )
 
 // CanAccess 是否允许访问
-func CanAccess(ctx context.Context, keyForRoles string, path string, pathAccess string) bool {
-	roles, err := RDB.SMembers(ctx, keyForRoles).Result()
-	if err != nil {
-		return false
-	}
+func CanAccess(ctx context.Context, roles []string, path string, pathAccess string) bool {
 
 	// 仅进行路径的请求访问权限校验
 	//pathAccess := AccessKeyPrefix + "_" + accountID + "_" + "path_access"
@@ -39,8 +35,8 @@ func CanAccess(ctx context.Context, keyForRoles string, path string, pathAccess 
 	return false
 }
 
-// CRUD 是否允许操作
-func CRUD(ctx context.Context, path string, keyOperation string, method string) bool {
+// CanDo 是否允许操作
+func CanDo(ctx context.Context, path string, keyOperation string, method string) bool {
 	pathWithMethod := path + "/" + method
 	val, err := RDB.HGet(ctx, keyOperation, pathWithMethod).Result()
 	if err != nil {
