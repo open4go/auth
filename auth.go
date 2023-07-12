@@ -24,7 +24,9 @@ type SimpleAuth struct {
 	Path2Roles map[string][]string `json:"path_2_roles"`
 
 	// 获取接口列表（所有角色下的接口列表)
-	ApiList map[string][]collections.APIInfo
+	ApiList map[string][]collections.APIInfo `json:"api_list"`
+	// 每个接口增删改查的权限
+	Op []PermissionsModel `json:"op"`
 }
 
 // BasicKey 缓存键
@@ -203,13 +205,15 @@ func (a *SimpleAuth) SignIn(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // LoadRoles 加载角色
 // 客户自行实现角色与账号的关联
 // 角色信息会被加载到redis中
-func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel, apiListMap map[string][]collections.APIInfo) *SimpleAuth {
+func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
+	apiListMap map[string][]collections.APIInfo) *SimpleAuth {
 	a.ApiList = apiListMap
 	// 显示工具栏: 创建、导出、上传
 	//toolBar := 0
@@ -257,6 +261,11 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel, apiListM
 		}
 	}
 
+	// 设置permission
+	err := a.setPermissions(ctx, permissions)
+	if err != nil {
+		return a
+	}
 	rp := RoleParams{
 		ToolBar:        a.DisplayToolBar,
 		MaxAccessLevel: a.MaxAccessLevel,
@@ -264,6 +273,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel, apiListM
 		Permissions:    permissions,
 	}
 	a.RoleParam = rp
+
 	return a
 }
 
@@ -292,6 +302,15 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 //	a.Apps = apps
 //	return nil
 //}
+
+func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []PermissionsModel) error {
+	err := operatingAuthority(ctx, a.Key.Operation, permissions)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
 
 // SetAccess 返回目录列表
 // 管理台根据返回的数据决定是否显示在导航栏
