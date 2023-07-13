@@ -385,7 +385,13 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		secondKey := a.Key.Role2Set4Paths + "_" + strconv.Itoa(int(time.Now().Unix()))
 		// 将key 记录下来以便退出的时候进行删除
 		// 将其本身也进行记录
-		err := RDB.SAdd(ctx, secondKey, paths).Err()
+		err := RDB.SAdd(ctx, a.Key.Keys, secondKey).Err()
+		if err != nil {
+			return err
+		}
+		// 将key 记录下来以便退出的时候进行删除
+		// 将其本身也进行记录
+		err = RDB.SAdd(ctx, secondKey, paths).Err()
 		if err != nil {
 			return err
 		}
