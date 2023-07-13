@@ -340,7 +340,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 		}
 
 		path2roles[apiInfo.Path] = append(path2roles[apiInfo.Path], roleID)
-		log.WithField("can_view_detail", apiInfo.CanViewDetail).Debug("check api info")
+		//log.WithField("can_view_detail", apiInfo.CanViewDetail).Debug("check api info")
 		// 如果开启
 		if apiInfo.CanViewDetail {
 			pathForDetail := apiInfo.Path + "/:_id"
@@ -376,7 +376,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		}
 	}
 
-	log.WithField("roles2paths", roles2paths).Debug("check the roles to paths")
+	//log.WithField("roles2paths", roles2paths).Debug("check the roles to paths")
 
 	// 加载访问控制信息到redis中
 	// 以便access及中间件完成check
