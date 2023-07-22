@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+
 // SimpleAuth 基本类型
 type SimpleAuth struct {
 	MaxAccessLevel uint     `json:"max_access_level"`
