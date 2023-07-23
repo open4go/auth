@@ -2,7 +2,6 @@ package auth
 
 import (
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -12,14 +11,14 @@ const (
 	defaultExpireTime      = time.Minute * 30
 )
 
-func getExpireTime() int {
+func getExpireTime() time.Duration {
 	t := os.Getenv(TokenExpireTimeConfKey)
 	if t != "" {
-		val, err := strconv.Atoi(t)
+		val, err := time.ParseDuration(t)
 		if err != nil {
-			return int(defaultExpireTime)
+			return defaultExpireTime
 		}
 		return val
 	}
-	return int(defaultExpireTime)
+	return defaultExpireTime
 }
