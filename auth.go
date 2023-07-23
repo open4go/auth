@@ -2,13 +2,13 @@ package auth
 
 import (
 	"context"
-	"github.com/r2day/collections"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
-)
 
+	"github.com/r2day/collections"
+	log "github.com/sirupsen/logrus"
+)
 
 // SimpleAuth 基本类型
 type SimpleAuth struct {
@@ -33,7 +33,7 @@ type SimpleAuth struct {
 // BasicKey 缓存键
 type BasicKey struct {
 	// 类型 set 存储当前登陆用户的 所有键
-    // 以便当用户退出后进行统一删除
+	// 以便当用户退出后进行统一删除
 	Keys string `json:"keys"`
 	// 类型 set 角色存储, 保存当前账号拥有的所有角色名称
 	Roles string `json:"roles"`
@@ -144,36 +144,7 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	}
 
 	// TODO 每一次操作都会更新expire，即当用户有操作行为则会延长过期时间
-	expireTime := getExpireTime()
-	_, err := RDB.Expire(context.TODO(), a.Key.Keys, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Roles, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Operation, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Path2Name, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Hide, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.PathAccess, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Role2Paths, expireTime).Result()
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = RDB.Expire(context.TODO(), a.Key.Role2Set4Paths, expireTime).Result()
+	err := a.ExpireSet(context.TODO())
 	if err != nil {
 		log.Error(err)
 	}
@@ -242,7 +213,6 @@ func (a *SimpleAuth) SignIn(ctx context.Context) error {
 		return err
 	}
 	// 设置所有key过期时间
-	
 
 	return nil
 }
@@ -454,6 +424,21 @@ func (a *SimpleAuth) SignOut(ctx context.Context) error {
 	}
 	for _, key := range keys {
 		RDB.Del(ctx, key)
+	}
+	return nil
+}
+
+// ExpireSet 退出
+func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
+	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		_, err = RDB.Expire(ctx, key, getExpireTime()).Result()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
