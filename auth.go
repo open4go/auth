@@ -2,11 +2,12 @@ package auth
 
 import (
 	"context"
-	"github.com/r2day/collections"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/r2day/collections"
+	log "github.com/sirupsen/logrus"
 )
 
 // SimpleAuth 基本类型
@@ -40,7 +41,7 @@ type BasicKey struct {
 	Operation string `json:"operation"`
 	// 操作
 	Path2Name string `json:"path_2_name"`
-	// 是否隐藏
+	// 类型 hash 是否隐藏
 	Hide string `json:"hide"`
 	// path_access
 	PathAccess string `json:"path_access"`
@@ -141,6 +142,12 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 		Role2Paths:     keyPrefix + "_" + "role2paths",
 		Role2Set4Paths: keyPrefix + "_" + "role2set4paths",
 	}
+
+	// TODO 每一次操作都会更新expire，即当用户有操作行为则会延长过期时间
+	err := a.ExpireSet(context.TODO())
+	if err != nil {
+		log.Error(err)
+	}
 	return a
 }
 
@@ -205,6 +212,7 @@ func (a *SimpleAuth) SignIn(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// 设置所有key过期时间
 
 	return nil
 }
@@ -416,6 +424,21 @@ func (a *SimpleAuth) SignOut(ctx context.Context) error {
 	}
 	for _, key := range keys {
 		RDB.Del(ctx, key)
+	}
+	return nil
+}
+
+// ExpireSet 退出
+func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
+	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		_, err = RDB.Expire(ctx, key, getExpireTime()).Result()
+		if err != nil {
+			log.Error(err)
+		}
 	}
 	return nil
 }
