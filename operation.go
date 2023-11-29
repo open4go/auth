@@ -16,38 +16,43 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 
 	for _, p := range permissions {
 
-		// 读
-		pathWithRead := p.Path + "/" + "GET"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithRead, p.Operation.Read)
+		// 先重置删除旧的权限缓存
+		err := resetOperatingAuthority(ctx, keyOperation, p.Path)
 		if err != nil {
 			return err
 		}
-
-		// 写
-		pathWithWrite := p.Path + "/" + "POST"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithWrite, p.Operation.Write)
-		if err != nil {
-			return err
+		for _, path := range p.Operation {
+			err = setOperatingAuthority(ctx, keyOperation, path, true)
+			if err != nil {
+				return err
+			}
 		}
-
-		// 改
-		pathWithUpdate := p.Path + "/:_id/" + "PUT"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithUpdate, p.Operation.Update)
-		if err != nil {
-			return err
-		}
-		// 详情
-		pathWithDetail := p.Path + "/:_id/" + "GET"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithDetail, p.Operation.Detail)
-		if err != nil {
-			return err
-		}
-		// 删除
-		pathWithDelete := p.Path + "/:_id/" + "DELETE"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithDelete, p.Operation.Delete)
-		if err != nil {
-			return err
-		}
+		//
+		//// 写
+		//pathWithWrite := p.Path + "/" + "POST"
+		//err = setOperatingAuthority(ctx, keyOperation, pathWithWrite, p.Operation.Write)
+		//if err != nil {
+		//	return err
+		//}
+		//
+		//// 改
+		//pathWithUpdate := p.Path + "/:_id/" + "PUT"
+		//err = setOperatingAuthority(ctx, keyOperation, pathWithUpdate, p.Operation.Update)
+		//if err != nil {
+		//	return err
+		//}
+		//// 详情
+		//pathWithDetail := p.Path + "/:_id/" + "GET"
+		//err = setOperatingAuthority(ctx, keyOperation, pathWithDetail, p.Operation.Detail)
+		//if err != nil {
+		//	return err
+		//}
+		//// 删除
+		//pathWithDelete := p.Path + "/:_id/" + "DELETE"
+		//err = setOperatingAuthority(ctx, keyOperation, pathWithDelete, p.Operation.Delete)
+		//if err != nil {
+		//	return err
+		//}
 	}
 	return nil
 }
@@ -55,6 +60,15 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 // 根据用户操作的api path进行标记并写入数据库
 func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, val bool) error {
 	err := RDB.HSet(ctx, operatingAuthorityKey, pathAndOperation, val).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// 根据用户操作的api path进行标记并写入数据库
+func resetOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string) error {
+	err := RDB.HDel(ctx, operatingAuthorityKey, pathAndOperation).Err()
 	if err != nil {
 		return err
 	}
