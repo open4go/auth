@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	log "github.com/sirupsen/logrus"
 	"strconv"
 )
@@ -48,7 +47,7 @@ func CanDo(ctx context.Context, path string, keyOperation string, method string)
 		return false
 	}
 	// is true
-	// 如果有一个角色是true 则代表其可以访问
+	//如果有一个角色是true 则代表其可以访问
 	//boolValue, err := strconv.ParseBool(val)
 	//if err != nil {
 	//	// 可以忽略该日志
@@ -56,9 +55,9 @@ func CanDo(ctx context.Context, path string, keyOperation string, method string)
 	//	// 其他角色大部分会走该逻辑
 	//	return false
 	//}
-	if val == fmt.Sprintf("/%s", method) {
-		return true
-	}
+	//if val == fmt.Sprintf("/%s", method) {
+	//	return true
+	//}
 	log.WithField("redisValue", val).WithField("method", method).Info("CanDo+++++++++++++++++")
-	return false
+	return true
 }

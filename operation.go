@@ -17,10 +17,10 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 	for _, p := range permissions {
 
 		// 先重置删除旧的权限缓存
-		err := resetOperatingAuthority(ctx, keyOperation, p.Path)
-		if err != nil {
-			return err
-		}
+		//err := resetOperatingAuthority(ctx, keyOperation, p.Path)
+		//if err != nil {
+		//	return err
+		//}
 		for _, requestParamWithMethod := range p.Operation {
 			err = setOperatingAuthority(ctx, keyOperation, p.Path, requestParamWithMethod)
 			if err != nil {
