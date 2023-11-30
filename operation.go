@@ -2,6 +2,17 @@ package auth
 
 import (
 	"context"
+	"strings"
+)
+
+var (
+	map2op = map[string]string{
+		"list":   "/GET",
+		"write":  "/POST",
+		"delete": "/:_id/DELETE",
+		"update": "/:_id/PUT",
+		"read":   "/:_id/GET",
+	}
 )
 
 // operatingAuthority 操作权限 设定用户对api的最终可访问信息
@@ -15,38 +26,19 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 	// key := accessKeyPrefix + accountId
 
 	for _, p := range permissions {
-
-		// 读
-		pathWithRead := p.Path + "/" + "GET"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithRead, p.Operation.Read)
-		if err != nil {
-			return err
-		}
-
-		// 写
-		pathWithWrite := p.Path + "/" + "POST"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithWrite, p.Operation.Write)
-		if err != nil {
-			return err
-		}
-
-		// 改
-		pathWithUpdate := p.Path + "/:_id/" + "PUT"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithUpdate, p.Operation.Update)
-		if err != nil {
-			return err
-		}
-		// 详情
-		pathWithDetail := p.Path + "/:_id/" + "GET"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithDetail, p.Operation.Detail)
-		if err != nil {
-			return err
-		}
-		// 删除
-		pathWithDelete := p.Path + "/:_id/" + "DELETE"
-		err = setOperatingAuthority(ctx, keyOperation, pathWithDelete, p.Operation.Delete)
-		if err != nil {
-			return err
+		allOp := strings.Join(p.Operation, ",")
+		for op, v := range map2op {
+			isTrue := false
+			pathWithRead := p.Path + v
+			if strings.Contains(allOp, op) {
+				isTrue = true
+			} else {
+				isTrue = false
+			}
+			err = setOperatingAuthority(ctx, keyOperation, pathWithRead, isTrue)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
