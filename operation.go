@@ -21,8 +21,8 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 		if err != nil {
 			return err
 		}
-		for _, path := range p.Operation {
-			err = setOperatingAuthority(ctx, keyOperation, path, true)
+		for _, requestParamWithMethod := range p.Operation {
+			err = setOperatingAuthority(ctx, keyOperation, p.Path, requestParamWithMethod)
 			if err != nil {
 				return err
 			}
@@ -58,8 +58,8 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 }
 
 // 根据用户操作的api path进行标记并写入数据库
-func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, val bool) error {
-	err := RDB.HSet(ctx, operatingAuthorityKey, pathAndOperation, val).Err()
+func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, requestParamWithMethod string) error {
+	err := RDB.HSet(ctx, operatingAuthorityKey, pathAndOperation, requestParamWithMethod).Err()
 	if err != nil {
 		return err
 	}

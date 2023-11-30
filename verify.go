@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	log "github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -37,8 +38,8 @@ func CanAccess(ctx context.Context, roles []string, path string, pathAccess stri
 
 // CanDo 是否允许操作
 func CanDo(ctx context.Context, path string, keyOperation string, method string) bool {
-	pathWithMethod := path + "/" + method
-	val, err := RDB.HGet(ctx, keyOperation, pathWithMethod).Result()
+	//pathWithMethod := path + "/" + method
+	val, err := RDB.HGet(ctx, keyOperation, path).Result()
 	if err != nil {
 		// 可以忽略该日志
 		// 一般情况下仅角色匹配到path即可访问
@@ -47,12 +48,16 @@ func CanDo(ctx context.Context, path string, keyOperation string, method string)
 	}
 	// is true
 	// 如果有一个角色是true 则代表其可以访问
-	boolValue, err := strconv.ParseBool(val)
-	if err != nil {
-		// 可以忽略该日志
-		// 一般情况下仅角色匹配到path即可访问
-		// 其他角色大部分会走该逻辑
-		return false
+	//boolValue, err := strconv.ParseBool(val)
+	//if err != nil {
+	//	// 可以忽略该日志
+	//	// 一般情况下仅角色匹配到path即可访问
+	//	// 其他角色大部分会走该逻辑
+	//	return false
+	//}
+	if val == method {
+		return true
 	}
-	return boolValue
+	log.WithField("redisValue", val).WithField("method", method).Info("CanDo+++++++++++++++++")
+	return false
 }
