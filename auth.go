@@ -258,12 +258,12 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 
 		// 将处理好的角色名称也加入到缓存中
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
-		err := RDB.SAdd(ctx, a.Key.Roles, role.ID.Hex()).Err()
+		err := RDB.SAdd(ctx, a.Key.Roles, role.Name).Err()
 		if err != nil {
 			continue
 		}
 
-		err = a.SetAccess(ctx, a.ApiList[role.ID.Hex()], role.ID.Hex())
+		err = a.SetAccess(ctx, a.ApiList[role.Name], role.Name)
 		if err != nil {
 			continue
 		}
