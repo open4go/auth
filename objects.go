@@ -15,6 +15,8 @@ type PermissionsModel struct {
 	AppID string `json:"app_id" bson:"app_id"`
 	// 请求路径
 	Path string `json:"path" bson:"path"`
+	// 请求名称
+	Name string `json:"name" bson:"name"`
 	// 操作包含read/write/update/delete/list
 	Operation []string `json:"operation" bson:"operation"`
 }
