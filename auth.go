@@ -306,7 +306,7 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 	// 检测账号是否有操作权限
 	isCanDo := CanDo(ctx, path, a.Key.Operation, method)
 	if !isCanDo {
-		return http.StatusForbidden
+		return http.StatusMethodNotAllowed
 	}
 	return http.StatusOK
 }
