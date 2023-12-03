@@ -265,6 +265,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 
 		err = a.SetAccess(ctx, a.ApiList[role.ID.Hex()], role.ID.Hex())
 		if err != nil {
+			log.WithField("roleName", role.Name).Error(err)
 			continue
 		}
 	}
