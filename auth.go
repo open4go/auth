@@ -75,6 +75,10 @@ func NewRBAM() *SimpleAuth {
 		MaxAccessLevel: 0,
 		MyRoles:        make([]string, 0),
 		DisplayToolBar: 0,
+		Apps:           make([]*AppModel, 0),
+		Path2Roles:     make(map[string][]string, 0),
+		ApiList:        make(map[string][]collections.APIInfo, 0),
+		Op:             make([]PermissionsModel, 0),
 	}
 }
 
@@ -230,7 +234,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 	permissions := make([]PermissionsModel, 0)
 
 	for _, role := range roles {
-
+		log.WithField("apiInfo.Name", role.Name).Info("-------roles----")
 		// 角色状态不可用
 		if !role.Meta.Status {
 			break
@@ -260,6 +264,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
 		err := RDB.SAdd(ctx, a.Key.Roles, role.ID.Hex()).Err()
 		if err != nil {
+			log.WithField("roleName", role.Name).Error(err)
 			continue
 		}
 
@@ -268,6 +273,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 			log.WithField("roleName", role.Name).Error(err)
 			continue
 		}
+		log.WithField("apiInfo.Name", role.Name).Info("-------roles--done--")
 	}
 
 	// 设置permission
@@ -325,7 +331,6 @@ func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []Permissio
 // SetAccess 返回目录列表
 // 管理台根据返回的数据决定是否显示在导航栏
 func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInfo, roleID string) error {
-	path2roles := make(map[string][]string, 0)
 	for _, apiInfo := range apiList {
 		// 默认是false
 		// 如果是true则忽略本条规则
@@ -335,6 +340,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 
 		err := RDB.HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
 		if err != nil {
+			log.WithField("apiInfo.Name", apiInfo.Name).Error(err)
 			continue
 		}
 
@@ -348,15 +354,13 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 			}
 		}
 
-		path2roles[apiInfo.Path] = append(path2roles[apiInfo.Path], roleID)
-		//log.WithField("can_view_detail", apiInfo.CanViewDetail).Debug("check api info")
+		a.Path2Roles[apiInfo.Path] = append(a.Path2Roles[apiInfo.Path], roleID)
 		// 如果开启
 		if apiInfo.CanViewDetail {
 			pathForDetail := apiInfo.Path + "/:_id"
-			path2roles[pathForDetail] = append(path2roles[pathForDetail], roleID)
+			a.Path2Roles[pathForDetail] = append(a.Path2Roles[pathForDetail], roleID)
 		}
 	}
-	a.Path2Roles = path2roles
 	return nil
 }
 
