@@ -447,3 +447,12 @@ func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
 	}
 	return nil
 }
+
+// IsOnline 是否在线
+func (a *SimpleAuth) IsOnline(ctx context.Context) (bool, error) {
+	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	if err != nil {
+		return false, err
+	}
+	return len(keys) > 0, nil
+}
