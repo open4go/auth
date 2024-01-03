@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"github.com/r2day/auth"
 	"github.com/r2day/collections"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -15,7 +14,9 @@ type PermissionsModel struct {
 	AppID string `json:"app_id" bson:"app_id"`
 	// 请求路径
 	Path string `json:"path" bson:"path"`
-	// 操作
+	// 请求名称
+	Name string `json:"name" bson:"name"`
+	// 操作包含read/write/update/delete/list
 	Operation []string `json:"operation" bson:"operation"`
 }
 
@@ -25,13 +26,29 @@ type OperationModel struct {
 	Path bool `json:"read" bson:"read"`
 }
 
+// MetaModel 元模型
+type MetaModel struct {
+	// 商户号
+	MerchantID string `json:"merchant_id" bson:"merchant_id"`
+	// 创建者
+	AccountID string `json:"account_id" bson:"account_id"`
+	// 创建时间
+	CreatedAt string `json:"created_at" bson:"created_at"`
+	// 更新时间
+	UpdatedAt string `json:"updated_at" bson:"updated_at"`
+	// 状态
+	Status bool `json:"status"`
+	// 根据角色的最低级别写入
+	AccessLevel uint `json:"access_level" bson:"access_level"`
+}
+
 // RoleModel 模型
 type RoleModel struct {
 	// 基本的数据库模型字段，一般情况所有model都应该包含如下字段
 	// 创建时（用户上传的数据为空，所以默认可以不传该值)
 	ID primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	// 基本的数据库模型字段，一般情况所有model都应该包含如下字段
-	Meta auth.MetaModel `json:"meta" bson:"meta"`
+	Meta MetaModel `json:"meta" bson:"meta"`
 	// 名称
 	Name string `json:"name" bson:"name"`
 	// 工具列表
@@ -39,7 +56,7 @@ type RoleModel struct {
 	// 应用列表 toolbar
 	// 存储应用的id
 	// 通过应用id 快速获得应用列表
-	Apps []string `json:"apps" bson:"apps"`
+	Apps []string `json:"app" bson:"app"`
 	// 权限
 	Permissions []PermissionsModel `json:"permissions" bson:"permissions"`
 }

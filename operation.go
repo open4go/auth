@@ -2,6 +2,17 @@ package auth
 
 import (
 	"context"
+	"strings"
+)
+
+var (
+	map2op = map[string]string{
+		"list":   "/GET",
+		"write":  "/POST",
+		"delete": "/:_id/DELETE",
+		"update": "/:_id/PUT",
+		"read":   "/:_id/GET",
+	}
 )
 
 // operatingAuthority 操作权限 设定用户对api的最终可访问信息
@@ -15,14 +26,16 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 	// key := accessKeyPrefix + accountId
 
 	for _, p := range permissions {
-
-		// 先重置删除旧的权限缓存
-		//err := resetOperatingAuthority(ctx, keyOperation, p.Path)
-		//if err != nil {
-		//	return err
-		//}
-		for _, requestParamWithMethod := range p.Operation {
-			err = setOperatingAuthority(ctx, keyOperation, p.Path, requestParamWithMethod)
+		allOp := strings.Join(p.Operation, ",")
+		for op, v := range map2op {
+			isTrue := false
+			pathWithRead := p.Path + v
+			if strings.Contains(allOp, op) {
+				isTrue = true
+			} else {
+				isTrue = false
+			}
+			err = setOperatingAuthority(ctx, keyOperation, pathWithRead, isTrue)
 			if err != nil {
 				return err
 			}
@@ -32,17 +45,8 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 }
 
 // 根据用户操作的api path进行标记并写入数据库
-func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, requestParamWithMethod string) error {
-	err := RDB.HSet(ctx, operatingAuthorityKey, pathAndOperation, requestParamWithMethod).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// 根据用户操作的api path进行标记并写入数据库
-func resetOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string) error {
-	err := RDB.HDel(ctx, operatingAuthorityKey, pathAndOperation).Err()
+func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, val bool) error {
+	err := RDB.HSet(ctx, operatingAuthorityKey, pathAndOperation, val).Err()
 	if err != nil {
 		return err
 	}

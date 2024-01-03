@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/open4go/log"
 	"github.com/r2day/collections"
-	log "github.com/sirupsen/logrus"
 )
 
 // SimpleAuth 基本类型
@@ -18,7 +18,7 @@ type SimpleAuth struct {
 	// 键管理
 	Key BasicKey `json:"key"`
 	// 应用列表
-	Apps []*AppModel `json:"apps"`
+	Apps []*AppModel `json:"app"`
 	// 角色配置
 	RoleParam RoleParams `json:"role_param"`
 
@@ -36,7 +36,7 @@ type BasicKey struct {
 	// 以便当用户退出后进行统一删除
 	Keys string `json:"keys"`
 	// 类型 set 角色存储, 保存当前账号拥有的所有角色名称
-	Roles string `json:"roles"`
+	Roles string `json:"role"`
 	// 操作
 	Operation string `json:"operation"`
 	// 操作
@@ -75,6 +75,10 @@ func NewRBAM() *SimpleAuth {
 		MaxAccessLevel: 0,
 		MyRoles:        make([]string, 0),
 		DisplayToolBar: 0,
+		Apps:           make([]*AppModel, 0),
+		Path2Roles:     make(map[string][]string),
+		ApiList:        make(map[string][]collections.APIInfo),
+		Op:             make([]PermissionsModel, 0),
 	}
 }
 
@@ -104,12 +108,12 @@ func (a *SimpleAuth) GetAllowPaths(ctx context.Context) []string {
 		// user_1 是hash key，username 是字段名, tizi365是字段值
 		secondKey, err := RDB.HGet(ctx, a.Key.Role2Paths, role).Result()
 		if err != nil {
-			log.WithField("secondKey", secondKey).Error(err)
+			log.Log().WithField("secondKey", secondKey).Error(err)
 			continue
 		}
 		tmpPaths, err = RDB.SMembers(ctx, secondKey).Result()
 		if err != nil {
-			log.WithField("tmpPaths secondKey", secondKey).Error(err)
+			log.Log().WithField("tmpPaths secondKey", secondKey).Error(err)
 			continue
 		}
 		paths = append(paths, tmpPaths...)
@@ -120,10 +124,10 @@ func (a *SimpleAuth) GetAllowPaths(ctx context.Context) []string {
 func (a *SimpleAuth) GetMyRoles(ctx context.Context) []string {
 	roles, err := RDB.HGetAll(ctx, a.Key.Role2Paths).Result()
 	if err != nil {
-		log.Error(err)
+		log.Log().Error(err)
 		return a.MyRoles
 	}
-	for role, _ := range roles {
+	for role := range roles {
 		a.MyRoles = append(a.MyRoles, role)
 	}
 	return a.MyRoles
@@ -134,7 +138,7 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	keyPrefix := authPrefixKey + "_" + accountID
 	a.Key = BasicKey{
 		Keys:           keyPrefix + "_" + "keys",
-		Roles:          keyPrefix + "_" + "roles",
+		Roles:          keyPrefix + "_" + "role",
 		Operation:      keyPrefix + "_" + "operations",
 		Path2Name:      keyPrefix + "_" + "path2name",
 		Hide:           keyPrefix + "_" + "hide",
@@ -146,7 +150,7 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	// TODO 每一次操作都会更新expire，即当用户有操作行为则会延长过期时间
 	err := a.ExpireSet(context.TODO())
 	if err != nil {
-		log.Error(err)
+		log.Log().Error(err)
 	}
 	return a
 }
@@ -230,7 +234,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 	permissions := make([]PermissionsModel, 0)
 
 	for _, role := range roles {
-
+		//log.Log().WithField("apiInfo.Name", role.Name).Info("-------role----")
 		// 角色状态不可用
 		if !role.Meta.Status {
 			break
@@ -260,13 +264,16 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
 		err := RDB.SAdd(ctx, a.Key.Roles, role.Name).Err()
 		if err != nil {
+			log.Log().WithField("roleName", role.Name).Error(err)
 			continue
 		}
 
 		err = a.SetAccess(ctx, a.ApiList[role.Name], role.Name)
 		if err != nil {
+			log.Log().WithField("roleName", role.Name).Error(err)
 			continue
 		}
+		//log.Log().WithField("apiInfo.Name", role.Name).Info("-------role--done--")
 	}
 
 	// 设置permission
@@ -299,7 +306,7 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 	// 检测账号是否有操作权限
 	isCanDo := CanDo(ctx, path, a.Key.Operation, method)
 	if !isCanDo {
-		return http.StatusForbidden
+		return http.StatusMethodNotAllowed
 	}
 	return http.StatusOK
 }
@@ -307,7 +314,7 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []PermissionsModel) error {
 	err := operatingAuthority(ctx, a.Key.Operation, permissions)
 	if err != nil {
-		log.Error(err)
+		log.Log().Error(err)
 		return err
 	}
 	return nil
@@ -316,7 +323,6 @@ func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []Permissio
 // SetAccess 返回目录列表
 // 管理台根据返回的数据决定是否显示在导航栏
 func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInfo, roleID string) error {
-	path2roles := make(map[string][]string, 0)
 	for _, apiInfo := range apiList {
 		// 默认是false
 		// 如果是true则忽略本条规则
@@ -326,6 +332,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 
 		err := RDB.HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
 		if err != nil {
+			log.Log().WithField("apiInfo.Name", apiInfo.Name).Error(err)
 			continue
 		}
 
@@ -339,15 +346,13 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 			}
 		}
 
-		path2roles[apiInfo.Path] = append(path2roles[apiInfo.Path], roleID)
-		//log.WithField("can_view_detail", apiInfo.CanViewDetail).Debug("check api info")
+		a.Path2Roles[apiInfo.Path] = append(a.Path2Roles[apiInfo.Path], roleID)
 		// 如果开启
 		if apiInfo.CanViewDetail {
 			pathForDetail := apiInfo.Path + "/:_id"
-			path2roles[pathForDetail] = append(path2roles[pathForDetail], roleID)
+			a.Path2Roles[pathForDetail] = append(a.Path2Roles[pathForDetail], roleID)
 		}
 	}
-	a.Path2Roles = path2roles
 	return nil
 }
 
@@ -376,7 +381,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		}
 	}
 
-	//log.WithField("roles2paths", roles2paths).Debug("check the roles to paths")
+	//log.Log().WithField("roles2paths", roles2paths).Debug("check the role to paths")
 
 	// 加载访问控制信息到redis中
 	// 以便access及中间件完成check
@@ -397,7 +402,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		}
 		err = RDB.HSet(ctx, a.Key.Role2Paths, role, secondKey).Err()
 		if err != nil {
-			log.Error(err)
+			log.Log().Error(err)
 			return err
 		}
 	}
@@ -429,8 +434,17 @@ func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
 	for _, key := range keys {
 		_, err = RDB.Expire(ctx, key, getExpireTime()).Result()
 		if err != nil {
-			log.Error(err)
+			log.Log().Error(err)
 		}
 	}
 	return nil
+}
+
+// IsOnline 是否在线
+func (a *SimpleAuth) IsOnline(ctx context.Context) (bool, error) {
+	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	if err != nil {
+		return false, err
+	}
+	return len(keys) > 0, nil
 }
