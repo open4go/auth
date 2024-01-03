@@ -304,14 +304,6 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 	return http.StatusOK
 }
 
-// LoadApps 加载应用
-// 客户自行实现角色与账号的关联
-// 角色信息会被加载到redis中
-//func (a *SimpleAuth) LoadApps(ctx context.Context, apps []*AppModel) error {
-//	a.Apps = apps
-//	return nil
-//}
-
 func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []PermissionsModel) error {
 	err := operatingAuthority(ctx, a.Key.Operation, permissions)
 	if err != nil {

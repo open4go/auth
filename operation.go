@@ -27,32 +27,6 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 				return err
 			}
 		}
-		//
-		//// 写
-		//pathWithWrite := p.Path + "/" + "POST"
-		//err = setOperatingAuthority(ctx, keyOperation, pathWithWrite, p.Operation.Write)
-		//if err != nil {
-		//	return err
-		//}
-		//
-		//// 改
-		//pathWithUpdate := p.Path + "/:_id/" + "PUT"
-		//err = setOperatingAuthority(ctx, keyOperation, pathWithUpdate, p.Operation.Update)
-		//if err != nil {
-		//	return err
-		//}
-		//// 详情
-		//pathWithDetail := p.Path + "/:_id/" + "GET"
-		//err = setOperatingAuthority(ctx, keyOperation, pathWithDetail, p.Operation.Detail)
-		//if err != nil {
-		//	return err
-		//}
-		//// 删除
-		//pathWithDelete := p.Path + "/:_id/" + "DELETE"
-		//err = setOperatingAuthority(ctx, keyOperation, pathWithDelete, p.Operation.Delete)
-		//if err != nil {
-		//	return err
-		//}
 	}
 	return nil
 }
