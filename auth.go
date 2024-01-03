@@ -18,7 +18,7 @@ type SimpleAuth struct {
 	// 键管理
 	Key BasicKey `json:"key"`
 	// 应用列表
-	Apps []*AppModel `json:"apps"`
+	Apps []*AppModel `json:"app"`
 	// 角色配置
 	RoleParam RoleParams `json:"role_param"`
 
@@ -36,7 +36,7 @@ type BasicKey struct {
 	// 以便当用户退出后进行统一删除
 	Keys string `json:"keys"`
 	// 类型 set 角色存储, 保存当前账号拥有的所有角色名称
-	Roles string `json:"roles"`
+	Roles string `json:"role"`
 	// 操作
 	Operation string `json:"operation"`
 	// 操作
@@ -138,7 +138,7 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	keyPrefix := authPrefixKey + "_" + accountID
 	a.Key = BasicKey{
 		Keys:           keyPrefix + "_" + "keys",
-		Roles:          keyPrefix + "_" + "roles",
+		Roles:          keyPrefix + "_" + "role",
 		Operation:      keyPrefix + "_" + "operations",
 		Path2Name:      keyPrefix + "_" + "path2name",
 		Hide:           keyPrefix + "_" + "hide",
@@ -234,7 +234,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 	permissions := make([]PermissionsModel, 0)
 
 	for _, role := range roles {
-		log.WithField("apiInfo.Name", role.Name).Info("-------roles----")
+		log.WithField("apiInfo.Name", role.Name).Info("-------role----")
 		// 角色状态不可用
 		if !role.Meta.Status {
 			break
@@ -273,7 +273,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 			log.WithField("roleName", role.Name).Error(err)
 			continue
 		}
-		log.WithField("apiInfo.Name", role.Name).Info("-------roles--done--")
+		log.WithField("apiInfo.Name", role.Name).Info("-------role--done--")
 	}
 
 	// 设置permission
@@ -314,8 +314,8 @@ func (a *SimpleAuth) Verify(ctx context.Context, path string, method string) int
 // LoadApps 加载应用
 // 客户自行实现角色与账号的关联
 // 角色信息会被加载到redis中
-//func (a *SimpleAuth) LoadApps(ctx context.Context, apps []*AppModel) error {
-//	a.Apps = apps
+//func (a *SimpleAuth) LoadApps(ctx context.Context, app []*AppModel) error {
+//	a.Apps = app
 //	return nil
 //}
 
@@ -389,7 +389,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		}
 	}
 
-	//log.WithField("roles2paths", roles2paths).Debug("check the roles to paths")
+	//log.WithField("roles2paths", roles2paths).Debug("check the role to paths")
 
 	// 加载访问控制信息到redis中
 	// 以便access及中间件完成check

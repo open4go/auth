@@ -52,7 +52,7 @@ type Model struct {
 	// 邮箱
 	Email string `json:"email"  bson:"email"`
 	// 角色名称列表
-	Roles []string `json:"roles"  bson:"roles"`
+	Roles []string `json:"role"  bson:"role"`
 	// IsOnline 是否在线
 	IsOnline bool `json:"is_online" bson:"-"`
 
