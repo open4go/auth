@@ -380,7 +380,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 	// config["admin"] = append(config["admin"], "/v1/auth/merchant/signin")
 	// user_1 是hash key，username 是字段名, 是字段值
 	// key := accessKeyPrefix + accountId
-	log.Log().WithField("path2roles", path2roles).Info("allowAccess")
+	log.Log().WithField("path2roles", path2roles).Debug("allowAccess")
 
 	for path, roles := range path2roles {
 		for _, role := range roles {
