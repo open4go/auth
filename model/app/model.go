@@ -41,4 +41,14 @@ type Model struct {
 	UrlPrefix string `json:"url_prefix" bson:"url_prefix"`
 	// AccessApi 可访问的api列表
 	AccessAPI []collections.APIInfo `json:"access_api"  bson:"access_api"`
+
+	// ApiAttr 可访问的api ApiAttr列表
+	ApiAttr []ApiAttribute `json:"api_attr"  bson:"api_attr"`
+}
+
+type ApiAttribute struct {
+	// 名称
+	Name string `json:"name" bson:"name"`
+	// 应用描述
+	Value string `json:"value" bson:"value"`
 }

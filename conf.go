@@ -1,18 +1,16 @@
 package auth
 
 import (
-	"os"
+	"github.com/spf13/viper"
 	"time"
 )
 
 const (
-	// TokenExpireTimeConfKey 默认配置
-	TokenExpireTimeConfKey = "TOKEN_EXPIRE_TIME_CONF_KEY"
-	defaultExpireTime      = time.Minute * 30
+	defaultExpireTime = time.Minute * 30
 )
 
 func getExpireTime() time.Duration {
-	t := os.Getenv(TokenExpireTimeConfKey)
+	t := viper.GetString("jwt.expire")
 	if t != "" {
 		val, err := time.ParseDuration(t)
 		if err != nil {
