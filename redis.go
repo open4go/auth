@@ -1,43 +1,39 @@
 package auth
 
-
 import (
 	"context"
-
 	"github.com/redis/go-redis/v9"
-
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
-// RDB 定义redis链接池
 var RDB *redis.Client
 
-// InitRedisDB 初始化redis链接池
 func InitRedisDB(redisAddr string, db int, poolSize int) error {
 	RDB = redis.NewClient(&redis.Options{
-		Addr:       redisAddr, // Redis地址
-		Password:   "",        // Redis账号
-		DB:         db,        // Redis库
-		PoolSize:   poolSize,  // Redis连接池大小
-		MaxRetries: 3,         // 最大重试次数
-		// IdleTimeout: 10 * time.Second, // 空闲链接超时时间
+		Addr:       redisAddr,
+		DB:         db,
+		PoolSize:   poolSize,
+		MaxRetries: 3,
 	})
-	pong, err := RDB.Ping(context.TODO()).Result()
-	if err == redis.Nil {
-		log.WithField("redisAddr", redisAddr).
-			WithField("db", db).
-			WithField("poolSize", poolSize).Error(err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	if err := RDB.Ping(ctx).Err(); err != nil {
+		log.WithFields(log.Fields{
+			"redisAddr": redisAddr,
+			"db":        db,
+			"poolSize":  poolSize,
+		}).WithError(err).Error("failed to connect to Redis")
 		return err
-	} else if err != nil {
-		log.WithField("redisAddr", redisAddr).
-			WithField("db", db).
-			WithField("poolSize", poolSize).Error(err)
-		return err
-	} else {
-		log.WithField("redisAddr", redisAddr).
-			WithField("pong", pong).
-			WithField("db", db).
-			WithField("poolSize", poolSize).Info("connect redis successful")
-		return nil
 	}
+
+	log.WithFields(log.Fields{
+		"redisAddr": redisAddr,
+		"db":        db,
+		"poolSize":  poolSize,
+	}).Info("connected to Redis")
+
+	return nil
 }

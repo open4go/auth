@@ -137,10 +137,11 @@ func (a *SimpleAuth) GetMyRoles(ctx context.Context) []string {
 func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 	keyPrefix := authPrefixKey + "_" + accountID
 	a.Key = BasicKey{
-		Keys:           keyPrefix + "_" + "keys",
-		Roles:          keyPrefix + "_" + "role",
-		Operation:      keyPrefix + "_" + "operations",
-		Path2Name:      keyPrefix + "_" + "path2name",
+		Keys:      keyPrefix + "_" + "keys",
+		Roles:     keyPrefix + "_" + "role",
+		Operation: keyPrefix + "_" + "operations",
+		// global path 2 name
+		Path2Name:      authPrefixKey + "_" + "path2name",
 		Hide:           keyPrefix + "_" + "hide",
 		PathAccess:     keyPrefix + "_" + "path_access",
 		Role2Paths:     keyPrefix + "_" + "role2paths",
@@ -163,10 +164,11 @@ func (a *SimpleAuth) recordKeys(ctx context.Context) error {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
-	if err != nil {
-		return err
-	}
+	// 全局key Path2Name 不再因为个别账号退出清理
+	//err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
+	//if err != nil {
+	//	return err
+	//}
 	// 将key 记录下来以便退出的时候进行删除
 	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Roles).Err()
 	if err != nil {
@@ -262,13 +264,13 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 
 		// 将处理好的角色名称也加入到缓存中
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
-		err := RDB.SAdd(ctx, a.Key.Roles, role.ID.Hex()).Err()
+		err := RDB.SAdd(ctx, a.Key.Roles, role.Name).Err()
 		if err != nil {
 			log.Log().WithField("roleName", role.Name).Error(err)
 			continue
 		}
 
-		err = a.SetAccess(ctx, a.ApiList[role.ID.Hex()], role.ID.Hex())
+		err = a.SetAccess(ctx, a.ApiList[role.Name], role.Name)
 		if err != nil {
 			log.Log().WithField("roleName", role.Name).Error(err)
 			continue
@@ -331,6 +333,7 @@ func (a *SimpleAuth) setPermissions(ctx context.Context, permissions []Permissio
 // SetAccess 返回目录列表
 // 管理台根据返回的数据决定是否显示在导航栏
 func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInfo, roleID string) error {
+	log.Log().WithField("apiList", apiList).WithField("roleID", roleID).Debug("SetAccess")
 	for _, apiInfo := range apiList {
 		// 默认是false
 		// 如果是true则忽略本条规则
@@ -338,6 +341,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 			continue
 		}
 
+		// 永久覆盖更新/存储/不再针对单个账号，节省资源
 		err := RDB.HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
 		if err != nil {
 			log.Log().WithField("apiInfo.Name", apiInfo.Name).Error(err)
@@ -376,6 +380,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 	// config["admin"] = append(config["admin"], "/v1/auth/merchant/signin")
 	// user_1 是hash key，username 是字段名, 是字段值
 	// key := accessKeyPrefix + accountId
+	log.Log().WithField("path2roles", path2roles).Debug("allowAccess")
 
 	for path, roles := range path2roles {
 		for _, role := range roles {
