@@ -6,7 +6,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/open4go/log v0.0.8
-	github.com/open4go/model v0.0.6
+	github.com/open4go/model v0.0.15
 	github.com/r2day/auth v0.0.3
 	github.com/r2day/base v1.6.7
 	github.com/r2day/collections v1.1.3
@@ -39,6 +39,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
+	github.com/open4go/r3time v0.0.3 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/r2day/db v0.3.5 // indirect
