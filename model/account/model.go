@@ -43,7 +43,7 @@ type Model struct {
 	// 用户id 在这个表中使用userId
 	// 但是在内部的meta.account_id 是一样的值
 	// 但是meta 值是登陆者操作的人的id
-	UserID bool `json:"user_id"  bson:"user_id"`
+	UserID string `json:"user_id"  bson:"user_id"`
 	// 密码
 	Password string `json:"password"  bson:"password"`
 	// 是否开启审核
