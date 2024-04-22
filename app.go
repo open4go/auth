@@ -3,11 +3,21 @@ package auth
 import (
 	"context"
 	"fmt"
-	authModel "github.com/open4go/auth/model"
 	"github.com/open4go/auth/model/app"
+	r2mongo "github.com/open4go/db/mongo"
 	"github.com/open4go/log"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// GetDBHandler 获取数据库handler 这里定义一个方法
+func GetDBHandler() *mongo.Database {
+	handler, err := r2mongo.DBPool.GetHandler("sys_auth")
+	if err != nil {
+		log.Log().Fatal(err)
+	}
+	return handler
+}
 
 type MyApp struct {
 	Ctx           context.Context
@@ -136,7 +146,7 @@ func (a *MyApp) InitApp() {
 	// 获取当前用户角色的应用列表
 	m := &app.Model{}
 	apps := make([]app.Model, 0)
-	handler := m.Init(context.TODO(), authModel.MDB, m.CollectionName())
+	handler := m.Init(context.TODO(), GetDBHandler(), m.CollectionName())
 	_, err := handler.GetList(bson.D{}, &apps)
 	if err != nil {
 		panic(err)
