@@ -88,7 +88,7 @@ func (a *SimpleAuth) LoadConfig() {
 }
 
 func (a *SimpleAuth) HideMe(ctx context.Context, path string) bool {
-	needToHideMe, err := RDB.HGet(ctx, a.Key.Hide, path).Result()
+	needToHideMe, err := GetRedisAuthHandler().HGet(ctx, a.Key.Hide, path).Result()
 	if err != nil {
 		return false
 	}
@@ -106,12 +106,12 @@ func (a *SimpleAuth) GetAllowPaths(ctx context.Context) []string {
 	for _, role := range myRoles {
 		tmpPaths := make([]string, 0)
 		// user_1 是hash key，username 是字段名, tizi365是字段值
-		secondKey, err := RDB.HGet(ctx, a.Key.Role2Paths, role).Result()
+		secondKey, err := GetRedisAuthHandler().HGet(ctx, a.Key.Role2Paths, role).Result()
 		if err != nil {
 			log.Log().WithField("secondKey", secondKey).Error(err)
 			continue
 		}
-		tmpPaths, err = RDB.SMembers(ctx, secondKey).Result()
+		tmpPaths, err = GetRedisAuthHandler().SMembers(ctx, secondKey).Result()
 		if err != nil {
 			log.Log().WithField("tmpPaths secondKey", secondKey).Error(err)
 			continue
@@ -122,7 +122,7 @@ func (a *SimpleAuth) GetAllowPaths(ctx context.Context) []string {
 }
 
 func (a *SimpleAuth) GetMyRoles(ctx context.Context) []string {
-	roles, err := RDB.HGetAll(ctx, a.Key.Role2Paths).Result()
+	roles, err := GetRedisAuthHandler().HGetAll(ctx, a.Key.Role2Paths).Result()
 	if err != nil {
 		log.Log().Error(err)
 		return a.MyRoles
@@ -159,46 +159,46 @@ func (a *SimpleAuth) BindKey(accountID string) *SimpleAuth {
 // recordKeys 记录关联keys
 func (a *SimpleAuth) recordKeys(ctx context.Context) error {
 	// 将key 记录下来以便退出的时候进行删除
-	err := RDB.SAdd(ctx, a.Key.Keys, a.Key.Operation).Err()
+	err := GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Operation).Err()
 	if err != nil {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
 	// 全局key Path2Name 不再因为个别账号退出清理
-	//err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
+	//err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Path2Name).Err()
 	//if err != nil {
 	//	return err
 	//}
 	// 将key 记录下来以便退出的时候进行删除
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Roles).Err()
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Roles).Err()
 	if err != nil {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Hide).Err()
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Hide).Err()
 	if err != nil {
 		return err
 	}
 
 	// 将key 记录下来以便退出的时候进行删除
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.PathAccess).Err()
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.PathAccess).Err()
 	if err != nil {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Role2Paths).Err()
-	if err != nil {
-		return err
-	}
-	// 将key 记录下来以便退出的时候进行删除
-	// 将其本身也进行记录
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Role2Set4Paths).Err()
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Role2Paths).Err()
 	if err != nil {
 		return err
 	}
 	// 将key 记录下来以便退出的时候进行删除
 	// 将其本身也进行记录
-	err = RDB.SAdd(ctx, a.Key.Keys, a.Key.Keys).Err()
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Role2Set4Paths).Err()
+	if err != nil {
+		return err
+	}
+	// 将key 记录下来以便退出的时候进行删除
+	// 将其本身也进行记录
+	err = GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, a.Key.Keys).Err()
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func (a *SimpleAuth) LoadRoles(ctx context.Context, roles []*RoleModel,
 
 		// 将处理好的角色名称也加入到缓存中
 		// 使用角色id 避免用户输入特殊字符无法作为redis key
-		err := RDB.SAdd(ctx, a.Key.Roles, role.Name).Err()
+		err := GetRedisAuthHandler().SAdd(ctx, a.Key.Roles, role.Name).Err()
 		if err != nil {
 			log.Log().WithField("roleName", role.Name).Error(err)
 			continue
@@ -342,7 +342,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 		}
 
 		// 永久覆盖更新/存储/不再针对单个账号，节省资源
-		err := RDB.HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
+		err := GetRedisAuthHandler().HSet(ctx, a.Key.Path2Name, apiInfo.Path, apiInfo.Name).Err()
 		if err != nil {
 			log.Log().WithField("apiInfo.Name", apiInfo.Name).Error(err)
 			continue
@@ -352,7 +352,7 @@ func (a *SimpleAuth) SetAccess(ctx context.Context, apiList []collections.APIInf
 		// 部分接口列表access和profile 是在个人中心展示的
 		// 所以需要设置为true
 		if apiInfo.HideOnSidebar {
-			err = RDB.HSet(ctx, a.Key.Hide, apiInfo.Path, true).Err()
+			err = GetRedisAuthHandler().HSet(ctx, a.Key.Hide, apiInfo.Path, true).Err()
 			if err != nil {
 				continue
 			}
@@ -386,7 +386,7 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		for _, role := range roles {
 			// api访问控制key
 			pathWithRole := path + "_" + role
-			err := RDB.HSet(ctx, a.Key.PathAccess, pathWithRole, true).Err()
+			err := GetRedisAuthHandler().HSet(ctx, a.Key.PathAccess, pathWithRole, true).Err()
 			if err != nil {
 				return err
 			}
@@ -403,17 +403,17 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 		secondKey := a.Key.Role2Set4Paths + "_" + strconv.Itoa(int(time.Now().Unix()))
 		// 将key 记录下来以便退出的时候进行删除
 		// 将其本身也进行记录
-		err := RDB.SAdd(ctx, a.Key.Keys, secondKey).Err()
+		err := GetRedisAuthHandler().SAdd(ctx, a.Key.Keys, secondKey).Err()
 		if err != nil {
 			return err
 		}
 		// 将key 记录下来以便退出的时候进行删除
 		// 将其本身也进行记录
-		err = RDB.SAdd(ctx, secondKey, paths).Err()
+		err = GetRedisAuthHandler().SAdd(ctx, secondKey, paths).Err()
 		if err != nil {
 			return err
 		}
-		err = RDB.HSet(ctx, a.Key.Role2Paths, role, secondKey).Err()
+		err = GetRedisAuthHandler().HSet(ctx, a.Key.Role2Paths, role, secondKey).Err()
 		if err != nil {
 			log.Log().Error(err)
 			return err
@@ -428,24 +428,24 @@ func (a *SimpleAuth) allowAccess(ctx context.Context, path2roles map[string][]st
 
 // SignOut 退出
 func (a *SimpleAuth) SignOut(ctx context.Context) error {
-	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	keys, err := GetRedisAuthHandler().SMembers(ctx, a.Key.Keys).Result()
 	if err != nil {
 		return err
 	}
 	for _, key := range keys {
-		RDB.Del(ctx, key)
+		GetRedisAuthHandler().Del(ctx, key)
 	}
 	return nil
 }
 
 // ExpireSet 退出
 func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
-	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	keys, err := GetRedisAuthHandler().SMembers(ctx, a.Key.Keys).Result()
 	if err != nil {
 		return err
 	}
 	for _, key := range keys {
-		_, err = RDB.Expire(ctx, key, getExpireTime()).Result()
+		_, err = GetRedisAuthHandler().Expire(ctx, key, getExpireTime()).Result()
 		if err != nil {
 			log.Log().Error(err)
 		}
@@ -455,7 +455,7 @@ func (a *SimpleAuth) ExpireSet(ctx context.Context) error {
 
 // IsOnline 是否在线
 func (a *SimpleAuth) IsOnline(ctx context.Context) (bool, error) {
-	keys, err := RDB.SMembers(ctx, a.Key.Keys).Result()
+	keys, err := GetRedisAuthHandler().SMembers(ctx, a.Key.Keys).Result()
 	if err != nil {
 		return false, err
 	}

@@ -20,7 +20,7 @@ func InitRedisDB(redisAddr string, db int, poolSize int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := RDB.Ping(ctx).Err(); err != nil {
+	if err := GetRedisAuthHandler().Ping(ctx).Err(); err != nil {
 		log.WithFields(log.Fields{
 			"redisAddr": redisAddr,
 			"db":        db,

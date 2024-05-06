@@ -35,7 +35,7 @@ func NewMyApp(ctx context.Context) MyApp {
 
 // setNameWithPath 通过请求路径快速设定应用名称
 func (a *MyApp) setNameWithPath(path, name string) error {
-	err := RDB.HSet(a.Ctx, a.GlobalAppKey, path, name).Err()
+	err := GetRedisAuthHandler().HSet(a.Ctx, a.GlobalAppKey, path, name).Err()
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (a *MyApp) setNameWithPath(path, name string) error {
 
 // getNameByPath 通过请求路径快速找到应用名称
 func (a *MyApp) getNameByPath(path, name string) string {
-	name, err := RDB.HGet(a.Ctx, a.GlobalAppKey, path).Result()
+	name, err := GetRedisAuthHandler().HGet(a.Ctx, a.GlobalAppKey, path).Result()
 	if err != nil {
 		return ""
 	}
@@ -53,7 +53,7 @@ func (a *MyApp) getNameByPath(path, name string) string {
 
 // GetAllPath 通过请求路径快速找到应用名称
 func (a *MyApp) GetAllPath() map[string]string {
-	name, err := RDB.HGetAll(a.Ctx, a.GlobalAppKey).Result()
+	name, err := GetRedisAuthHandler().HGetAll(a.Ctx, a.GlobalAppKey).Result()
 	if err != nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (a *MyApp) GetAllPath() map[string]string {
 // setNameWithPath 通过请求路径快速设定应用属性
 func (a *MyApp) setApiAttribute(path, name string, value interface{}) error {
 	secondKey := fmt.Sprintf("%s:%s", path, name)
-	err := RDB.HSet(a.Ctx, a.GlobalAppAttr, secondKey, value).Err()
+	err := GetRedisAuthHandler().HSet(a.Ctx, a.GlobalAppAttr, secondKey, value).Err()
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (a *MyApp) setApiAttribute(path, name string, value interface{}) error {
 // getApiAttribute 通过请求路径快速获取应用属性
 func (a *MyApp) getApiAttribute(path, name string) string {
 	secondKey := fmt.Sprintf("%s:%s", path, name)
-	val, err := RDB.HGet(a.Ctx, a.GlobalAppAttr, secondKey).Result()
+	val, err := GetRedisAuthHandler().HGet(a.Ctx, a.GlobalAppAttr, secondKey).Result()
 	if err != nil {
 		return val
 	}

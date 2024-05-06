@@ -9,7 +9,7 @@ import (
 func CanAccess(ctx context.Context, roles []string, path string, pathAccess string) bool {
 	for _, role := range roles {
 		pathWithRole := path + "_" + role
-		val, err := RDB.HGet(ctx, pathAccess, pathWithRole).Result()
+		val, err := GetRedisAuthHandler().HGet(ctx, pathAccess, pathWithRole).Result()
 		if err != nil {
 			logIgnorableWarning("CanAccess", role, pathAccess, pathWithRole, err)
 			continue
@@ -23,7 +23,7 @@ func CanAccess(ctx context.Context, roles []string, path string, pathAccess stri
 
 func CanDo(ctx context.Context, path string, keyOperation string, method string) bool {
 	pathWithMethod := path + "/" + method
-	if val, err := RDB.HGet(ctx, keyOperation, pathWithMethod).Result(); err == nil {
+	if val, err := GetRedisAuthHandler().HGet(ctx, keyOperation, pathWithMethod).Result(); err == nil {
 		if boolValue, err := strconv.ParseBool(val); err == nil {
 			return boolValue
 		}
