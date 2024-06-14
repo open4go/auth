@@ -3,7 +3,7 @@ package auth
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/open4go/log"
 	"net/http"
 )
 
@@ -16,7 +16,9 @@ func AccessMiddleware(key []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		cookie, err := c.Cookie("jwt")
 		if cookie == "" {
-			log.Error("cookie name as jwt no found")
+			log.Log(c.Request.Context()).
+				WithField("cookie", "empty").
+				Error("cookie name as jwt no found")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -26,7 +28,8 @@ func AccessMiddleware(key []byte) gin.HandlerFunc {
 		})
 
 		if err != nil {
-			log.WithField("message", "parse claims failed").Error(err)
+			log.Log(c.Request.Context()).WithField("call", "ParseWithClaims").
+				Error(err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -34,7 +37,8 @@ func AccessMiddleware(key []byte) gin.HandlerFunc {
 		claims := token.Claims.(*jwt.StandardClaims)
 		loginInfo, err := LoadLoginInfo(claims.Issuer)
 		if err != nil {
-			log.WithField("message", "LoadLoginInfo failed").Error(err)
+			log.Log(c.Request.Context()).WithField("call", "LoadLoginInfo").
+				Error(err)
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

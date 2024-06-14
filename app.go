@@ -11,10 +11,10 @@ import (
 )
 
 // GetDBHandler 获取数据库handler 这里定义一个方法
-func GetDBHandler() *mongo.Database {
+func GetDBHandler(ctx context.Context) *mongo.Database {
 	handler, err := r2mongo.DBPool.GetHandler("sys_auth")
 	if err != nil {
-		log.Log().Fatal(err)
+		log.Log(ctx).Fatal(err)
 	}
 	return handler
 }
@@ -35,7 +35,7 @@ func NewMyApp(ctx context.Context) MyApp {
 
 // setNameWithPath 通过请求路径快速设定应用名称
 func (a *MyApp) setNameWithPath(path, name string) error {
-	err := GetRedisAuthHandler().HSet(a.Ctx, a.GlobalAppKey, path, name).Err()
+	err := GetRedisAuthHandler(a.Ctx).HSet(a.Ctx, a.GlobalAppKey, path, name).Err()
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (a *MyApp) setNameWithPath(path, name string) error {
 
 // getNameByPath 通过请求路径快速找到应用名称
 func (a *MyApp) getNameByPath(path, name string) string {
-	name, err := GetRedisAuthHandler().HGet(a.Ctx, a.GlobalAppKey, path).Result()
+	name, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.GlobalAppKey, path).Result()
 	if err != nil {
 		return ""
 	}
@@ -53,7 +53,7 @@ func (a *MyApp) getNameByPath(path, name string) string {
 
 // GetAllPath 通过请求路径快速找到应用名称
 func (a *MyApp) GetAllPath() map[string]string {
-	name, err := GetRedisAuthHandler().HGetAll(a.Ctx, a.GlobalAppKey).Result()
+	name, err := GetRedisAuthHandler(a.Ctx).HGetAll(a.Ctx, a.GlobalAppKey).Result()
 	if err != nil {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (a *MyApp) GetAllPath() map[string]string {
 // setNameWithPath 通过请求路径快速设定应用属性
 func (a *MyApp) setApiAttribute(path, name string, value interface{}) error {
 	secondKey := fmt.Sprintf("%s:%s", path, name)
-	err := GetRedisAuthHandler().HSet(a.Ctx, a.GlobalAppAttr, secondKey, value).Err()
+	err := GetRedisAuthHandler(a.Ctx).HSet(a.Ctx, a.GlobalAppAttr, secondKey, value).Err()
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (a *MyApp) setApiAttribute(path, name string, value interface{}) error {
 // getApiAttribute 通过请求路径快速获取应用属性
 func (a *MyApp) getApiAttribute(path, name string) string {
 	secondKey := fmt.Sprintf("%s:%s", path, name)
-	val, err := GetRedisAuthHandler().HGet(a.Ctx, a.GlobalAppAttr, secondKey).Result()
+	val, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.GlobalAppAttr, secondKey).Result()
 	if err != nil {
 		return val
 	}
@@ -92,42 +92,42 @@ func (a *MyApp) LoadAppInfo(app app.Model) {
 		// 设置大的应用名称
 		err := a.setNameWithPath(i.Path, app.Name)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("name", app.Name).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("name", app.Name).
 				Error(err)
 			continue
 		}
 
 		err = a.setApiAttribute(i.Path, "name", i.Name)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("name", i.Name).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("name", i.Name).
 				Error(err)
 			continue
 		}
 
 		err = a.setApiAttribute(i.Path, "desc", i.Desc)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("desc", i.Desc).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("desc", i.Desc).
 				Error(err)
 			continue
 		}
 
 		err = a.setApiAttribute(i.Path, "disable", i.Disable)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("disable", i.Disable).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("disable", i.Disable).
 				Error(err)
 			continue
 		}
 
 		err = a.setApiAttribute(i.Path, "can_view_detail", i.CanViewDetail)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("can_view_detail", i.CanViewDetail).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("can_view_detail", i.CanViewDetail).
 				Error(err)
 			continue
 		}
 
 		err = a.setApiAttribute(i.Path, "hide_on_sidebar", i.HideOnSidebar)
 		if err != nil {
-			log.Log().WithField("path", i.Path).WithField("hide_on_sidebar", i.HideOnSidebar).
+			log.Log(a.Ctx).WithField("path", i.Path).WithField("hide_on_sidebar", i.HideOnSidebar).
 				Error(err)
 			continue
 		}
@@ -146,7 +146,7 @@ func (a *MyApp) InitApp() {
 	// 获取当前用户角色的应用列表
 	m := &app.Model{}
 	apps := make([]app.Model, 0)
-	handler := m.Init(context.TODO(), GetDBHandler(), m.CollectionName())
+	handler := m.Init(context.TODO(), GetDBHandler(a.Ctx), m.CollectionName())
 	_, err := handler.GetList(bson.D{}, &apps)
 	if err != nil {
 		panic(err)

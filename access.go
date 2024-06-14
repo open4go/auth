@@ -94,7 +94,7 @@ func (a MyACL) isDisablePath(path string) bool {
 // 如果不存在则返回false
 // 默认为false
 func (a MyACL) myRoles() []string {
-	members, err := GetRedisAuthHandler().SMembers(a.Ctx, a.RoleMemberKey).Result()
+	members, err := GetRedisAuthHandler(a.Ctx).SMembers(a.Ctx, a.RoleMemberKey).Result()
 	if err != nil {
 		return nil
 	}
@@ -121,7 +121,7 @@ func (a MyACL) setPermission(path string, method string, role string) error {
 		return err
 	}
 
-	err = GetRedisAuthHandler().HSet(a.Ctx, a.PermissionKey, secondKey, newPayload).Err()
+	err = GetRedisAuthHandler(a.Ctx).HSet(a.Ctx, a.PermissionKey, secondKey, newPayload).Err()
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (a MyACL) loadRole(path, method string) []string {
 	secondKey := fmt.Sprintf("%s:%s", path, method)
 	roleArr := make([]string, 0)
 
-	role, err := GetRedisAuthHandler().HGet(a.Ctx, a.Path2Method4Roles, secondKey).Result()
+	role, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.Path2Method4Roles, secondKey).Result()
 	if err != nil {
 		return roleArr
 	}
@@ -186,7 +186,7 @@ func (a MyACL) hasPermission(path string, method string) bool {
 	for _, role := range a.Roles {
 		secondKey := fmt.Sprintf("%s:%s", path, method)
 		// load roleHas
-		rolePayload, err := GetRedisAuthHandler().HGet(a.Ctx, a.PermissionKey, secondKey).Result()
+		rolePayload, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.PermissionKey, secondKey).Result()
 		if err != nil {
 			continue
 		}
@@ -212,19 +212,19 @@ func (a MyACL) CanVisit(path string, method string, accountId string) bool {
 
 	// 查看是否已经启用接口
 	if a.isDisablePath(path) {
-		log.Log().WithField("path", path).Info("has set disable")
+		log.Log(a.Ctx).WithField("path", path).Info("has set disable")
 		return false
 	}
 
 	// 查看是否是公开接口
 	if a.isPublicPath(path) {
-		log.Log().WithField("path", path).Info("is open path")
+		log.Log(a.Ctx).WithField("path", path).Info("is open path")
 		return true
 	}
 
 	// 如果开启了调试模式则不校验请求权限
 	if a.isDebug() {
-		log.Log().WithField("path", path).Info("debug mode")
+		log.Log(a.Ctx).WithField("path", path).Info("debug mode")
 		return true
 	}
 
@@ -236,7 +236,7 @@ func (a MyACL) CanVisit(path string, method string, accountId string) bool {
 
 	// 通过判断角色是否包含信息
 	if a.hasPermission(path, method) {
-		log.Log().WithField("path", path).WithField("accountId", accountId).
+		log.Log(a.Ctx).WithField("path", path).WithField("accountId", accountId).
 			WithField("role", a.Roles).Warning("no set any role for this account")
 		return true
 	}

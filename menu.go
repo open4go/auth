@@ -16,7 +16,7 @@ func setMenu(ctx context.Context, accessAPIList []collections.APIInfo, hideSideb
 			continue
 		}
 
-		err = GetRedisAuthHandler().HSet(ctx, keyPath2Name, apiInfo.Path, apiInfo.Name).Err()
+		err = GetRedisAuthHandler(ctx).HSet(ctx, keyPath2Name, apiInfo.Path, apiInfo.Name).Err()
 		if err != nil {
 			continue
 		}
@@ -25,7 +25,7 @@ func setMenu(ctx context.Context, accessAPIList []collections.APIInfo, hideSideb
 		// 部分接口列表access和profile 是在个人中心展示的
 		// 所以需要设置为true
 		if apiInfo.HideOnSidebar {
-			err = GetRedisAuthHandler().HSet(ctx, hideSidebarKey, apiInfo.Path, true).Err()
+			err = GetRedisAuthHandler(ctx).HSet(ctx, hideSidebarKey, apiInfo.Path, true).Err()
 			if err != nil {
 				continue
 			}

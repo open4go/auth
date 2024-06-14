@@ -46,7 +46,7 @@ func operatingAuthority(ctx context.Context, keyOperation string, permissions []
 
 // 根据用户操作的api path进行标记并写入数据库
 func setOperatingAuthority(ctx context.Context, operatingAuthorityKey string, pathAndOperation string, val bool) error {
-	err := GetRedisAuthHandler().HSet(ctx, operatingAuthorityKey, pathAndOperation, val).Err()
+	err := GetRedisAuthHandler(ctx).HSet(ctx, operatingAuthorityKey, pathAndOperation, val).Err()
 	if err != nil {
 		return err
 	}
