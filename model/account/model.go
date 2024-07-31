@@ -55,6 +55,8 @@ type Model struct {
 	Desc string `json:"desc"  bson:"desc"`
 	// 邮箱
 	Email string `json:"email"  bson:"email"`
+	// 角色id列表
+	RoleID []string `json:"roles"  bson:"roles"`
 	// 角色名称列表
 	Roles []string `json:"role"  bson:"role"`
 	// IsOnline 是否在线
