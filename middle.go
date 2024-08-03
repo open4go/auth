@@ -1,56 +1,57 @@
 package auth
 
 import (
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/open4go/log"
 	"net/http"
+	"strings"
 )
 
-// AccessMiddleware 验证cookie并且将解析出来的账号
-// 通过账号获取角色
-// 通过角色判断其是否具有该api的访问权限
-// 用户登陆完成后会将权限配置信息写入 redis 数据库完成
-// 通过hget api/path/ role boolean
-func AccessMiddleware(key []byte) gin.HandlerFunc {
+func handleSingleResource(c *gin.Context) bool {
+	// 检查路由参数 id 是否存在
+	id := c.Param("_id")
+	log.Log(c.Request.Context()).WithField("_id", id).Debug("Checking for single resource with parameter _id")
+	return id != ""
+}
+
+// AccessMiddleware 在route部分应用该中间件
+func AccessMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookie, err := c.Cookie("jwt")
-		if cookie == "" {
+		userID := c.GetHeader("UserID")
+		roleManager := RoleManager{
+			"system:auth",
+			nil,
+		}
+
+		fullPath := c.FullPath()
+		isSingleResource := handleSingleResource(c)
+		if isSingleResource {
+			fullPath = strings.TrimSuffix(fullPath, "/:_id")
+		}
+
+		verify, err := roleManager.Verify(c.Request.Context(), fullPath, userID, c.Request.Method, isSingleResource)
+		if err != nil {
 			log.Log(c.Request.Context()).
-				WithField("cookie", "empty").
-				Error("cookie name as jwt no found")
+				WithField("request_path", c.FullPath()).
+				WithField("request_method", c.Request.Method).
+				WithField("userID", userID).
+				WithField("userIP", c.ClientIP()).
+				WithField("error", err).
+				Error("Verification error: user does not have permission to access this endpoint")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
-			return key, nil
-		})
-
-		if err != nil {
-			log.Log(c.Request.Context()).WithField("call", "ParseWithClaims").
-				Error(err)
+		if !verify {
+			log.Log(c.Request.Context()).
+				WithField("request_path", c.FullPath()).
+				WithField("request_method", c.Request.Method).
+				WithField("userID", userID).
+				WithField("userIP", c.ClientIP()).
+				Error("Access denied: user does not have permission to access this endpoint")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-
-		claims := token.Claims.(*jwt.StandardClaims)
-		loginInfo, err := LoadLoginInfo(claims.Issuer)
-		if err != nil {
-			log.Log(c.Request.Context()).WithField("call", "LoadLoginInfo").
-				Error(err)
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		// 写入解析客户的jwt token后得到的数据
-		c.Request.Header.Set("MerchantId", loginInfo.Namespace)
-		c.Request.Header.Set("AccountId", loginInfo.AccountId)
-		c.Request.Header.Set("UserId", loginInfo.UserId)
-		c.Request.Header.Set("UserName", loginInfo.UserName)
-		c.Request.Header.Set("Avatar", loginInfo.Avatar)
-		c.Request.Header.Set("LoginType", loginInfo.LoginType)
-		c.Request.Header.Set("LoginLevel", loginInfo.LoginLevel)
-
 		c.Next()
 	}
 }
