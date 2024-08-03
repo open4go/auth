@@ -87,52 +87,52 @@ func (a *MyApp) getApiAttribute(path, name string) string {
 // "can_view_detail": true,
 // "hide_on_sidebar": false
 func (a *MyApp) LoadAppInfo(app app.Model) {
-
-	for _, i := range app.AccessAPI {
-		// 设置大的应用名称
-		err := a.setNameWithPath(i.Path, app.Name)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("name", app.Name).
-				Error(err)
-			continue
-		}
-
-		err = a.setApiAttribute(i.Path, "name", i.Name)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("name", i.Name).
-				Error(err)
-			continue
-		}
-
-		err = a.setApiAttribute(i.Path, "desc", i.Desc)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("desc", i.Desc).
-				Error(err)
-			continue
-		}
-
-		err = a.setApiAttribute(i.Path, "disable", i.Disable)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("disable", i.Disable).
-				Error(err)
-			continue
-		}
-
-		err = a.setApiAttribute(i.Path, "can_view_detail", i.CanViewDetail)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("can_view_detail", i.CanViewDetail).
-				Error(err)
-			continue
-		}
-
-		err = a.setApiAttribute(i.Path, "hide_on_sidebar", i.HideOnSidebar)
-		if err != nil {
-			log.Log(a.Ctx).WithField("path", i.Path).WithField("hide_on_sidebar", i.HideOnSidebar).
-				Error(err)
-			continue
-		}
-
-	}
+	//
+	//for _, i := range app.AccessAPI {
+	//	// 设置大的应用名称
+	//	err := a.setNameWithPath(i.Path, app.Name)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("name", app.Name).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//	err = a.setApiAttribute(i.Path, "name", i.Name)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("name", i.Name).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//	err = a.setApiAttribute(i.Path, "desc", i.Desc)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("desc", i.Desc).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//	err = a.setApiAttribute(i.Path, "disable", i.Disable)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("disable", i.Disable).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//	err = a.setApiAttribute(i.Path, "can_view_detail", i.CanViewDetail)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("can_view_detail", i.CanViewDetail).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//	err = a.setApiAttribute(i.Path, "hide_on_sidebar", i.HideOnSidebar)
+	//	if err != nil {
+	//		log.Log(a.Ctx).WithField("path", i.Path).WithField("hide_on_sidebar", i.HideOnSidebar).
+	//			Error(err)
+	//		continue
+	//	}
+	//
+	//}
 }
 
 func (a *MyApp) LoadAllAppInfo(apps []app.Model) {
