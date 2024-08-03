@@ -210,6 +210,20 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 	return false, nil
 }
 
+// Reload 当系统初始化/重启或者更新角色信息
+// 新增角色时就会触发，使内存中始终保持最新的角色信息
+func (r *RoleManager) Reload(ctx context.Context) {
+	allRoles, err := r.fetchRoleList(ctx)
+	if err != nil {
+		log.Log(ctx).Error(err)
+		return
+	}
+	err = r.loadRoles(ctx, allRoles)
+	if err != nil {
+		return
+	}
+}
+
 func covertSliceToObjectID(ctx context.Context, slice []string) []*primitive.ObjectID {
 	objIds := make([]*primitive.ObjectID, 0)
 	for _, i := range slice {
