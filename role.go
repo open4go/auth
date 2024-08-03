@@ -87,6 +87,24 @@ func (r *RoleManager) loadRoles(ctx context.Context, roles []*role.Model) error 
 	return nil
 }
 
+// fetchPathsByRoleID 设置缓存避免重复查询用户角色
+// 仅当用户角色发生更新后再进行查询同步到redis
+func (r *RoleManager) fetchPathsByRoleID(ctx context.Context, role string) ([]string, error) {
+	roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, role)
+	results, err := GetRedisAuthHandler(ctx).HGetAll(ctx, roleKey).Result()
+	if err != nil {
+		log.Log(ctx).WithField("key", roleKey).
+			Error(err)
+		return nil, err
+	}
+
+	paths := make([]string, 0)
+	for path, _ := range results {
+		paths = append(paths, path)
+	}
+	return paths, nil
+}
+
 // SignIn 设置缓存避免重复查询用户角色
 // 仅当用户角色发生更新后再进行查询同步到redis
 func (r *RoleManager) SignIn(ctx context.Context, accountId string, roles []string) error {
@@ -145,6 +163,27 @@ func (r *RoleManager) fetchRolesFromCache(ctx context.Context, account string) (
 		return nil, err
 	}
 	return roles, nil
+}
+
+// FetchAllPaths 获取路径key
+func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) ([]string, error) {
+	roles, err := r.fetchRolesFromCache(ctx, account)
+	if err != nil {
+		log.Log(ctx).WithField("account", account).
+			Error(err)
+		return nil, err
+	}
+	allPaths := make([]string, 0)
+	for _, i := range roles {
+		paths, err := r.fetchPathsByRoleID(ctx, i)
+		if err != nil {
+			log.Log(ctx).WithField("account", account).
+				Error(err)
+			return nil, err
+		}
+		allPaths = append(allPaths, paths...)
+	}
+	return allPaths, nil
 }
 
 func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string, expect cst.Permission) (bool, error) {
