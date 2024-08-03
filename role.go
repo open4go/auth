@@ -76,7 +76,9 @@ func (r *RoleManager) loadRoles(ctx context.Context, roles []*role.Model) error 
 	for _, i := range roles {
 		roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, i.ID.Hex())
 		for _, j := range i.ApiDetail {
-			err := GetRedisAuthHandler(ctx).HSet(ctx, roleKey, j.Path, j.Attr).Err()
+			// redis: can't marshal cst.Permission
+			// 因此，需要将Attr 转换为uint
+			err := GetRedisAuthHandler(ctx).HSet(ctx, roleKey, j.Path, uint(j.Attr)).Err()
 			if err != nil {
 				log.Log(ctx).WithField("key", roleKey).
 					Error(err)
