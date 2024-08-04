@@ -168,35 +168,50 @@ func (r *RoleManager) fetchRolesFromCache(ctx context.Context, account string) (
 }
 
 // FetchAllPaths 获取路径key
-func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) ([]string, error) {
+func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) (map[string]int, []string, error) {
 	roles, err := r.fetchRolesFromCache(ctx, account)
 	if err != nil {
 		log.Log(ctx).WithField("account", account).
 			Error(err)
-		return nil, err
+		return nil, nil, err
 	}
 	allPaths := make([]string, 0)
+	path2attr := make(map[string]int)
 	for _, i := range roles {
 		paths, err := r.fetchPathsByRoleID(ctx, i)
 		if err != nil {
-			log.Log(ctx).WithField("account", account).
+			log.Log(ctx).WithField("account", account).WithField("role", i).
 				Error(err)
-			return nil, err
+			continue
+		}
+		// 计算当前路径的权限并与map中该路径在其他角色的权限进行位运算（如果其他角色也有该路径，则合并）
+		for _, path := range paths {
+			roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, i, path)
+			if err2 != nil {
+				log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
+				continue
+			}
+			path2attr[path] = roleAttr | path2attr[path]
 		}
 		allPaths = append(allPaths, paths...)
 	}
-	return allPaths, nil
+	return path2attr, allPaths, nil
 }
 
-func (r *RoleManager) Menu(ctx context.Context, paths []string) []MenuTree {
-	return r.convertPathsToStructure(paths)
+func (r *RoleManager) Menu(ctx context.Context, paths2Attr map[string]int) []MenuTree {
+	return r.convertPathsToStructure(paths2Attr)
 }
 
 // convertPathsToStructure 将路径数组转换为所需的结构
-func (r *RoleManager) convertPathsToStructure(paths []string) []MenuTree {
+func (r *RoleManager) convertPathsToStructure(paths2Attr map[string]int) []MenuTree {
 	menuMap := make(map[string][]string)
 
-	for _, path := range paths {
+	for path, attr := range paths2Attr {
+
+		if !isShow(attr) {
+			continue
+		}
+
 		// 去除路径前的斜杠，并拆分路径
 		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
@@ -229,13 +244,9 @@ func (r *RoleManager) convertPathsToStructure(paths []string) []MenuTree {
 
 func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string, expect cst.Permission) (bool, error) {
 	for _, i := range roles {
-		roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, i)
-		roleAttr, err := GetRedisAuthHandler(ctx).HGet(ctx, roleKey, path).Int()
-		if err != nil {
-			log.Log(ctx).WithField("key", roleKey).
-				Error(err)
-			// try next role
-			// 检查下一个角色是否有操作权限
+		roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, i, path)
+		if err2 != nil {
+			log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
 			continue
 		}
 
@@ -249,6 +260,19 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 	// 没有任何一个角色满足
 	// 因此返回false
 	return false, nil
+}
+
+func (r *RoleManager) getAttrByPathAndRole(ctx context.Context, role string, path string) (int, bool, error) {
+	roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, role)
+	roleAttr, err := GetRedisAuthHandler(ctx).HGet(ctx, roleKey, path).Int()
+	if err != nil {
+		log.Log(ctx).WithField("key", roleKey).
+			Error(err)
+		// try next role
+		// 检查下一个角色是否有操作权限
+		return 0, false, err
+	}
+	return roleAttr, false, nil
 }
 
 // Reload 当系统初始化/重启或者更新角色信息
@@ -306,4 +330,12 @@ func translateHTTPMethodToPermission(method string, isSingleResource bool) cst.P
 
 	// 对于不匹配的方法，返回0或其他合适的值
 	return 0
+}
+
+// 读取redis中的权限信息
+func isShow(roleAttr int) bool {
+	if roleAttr&int(cst.Show) == int(cst.Show) {
+		return true
+	}
+	return false
 }
