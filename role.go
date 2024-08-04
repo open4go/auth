@@ -188,6 +188,39 @@ func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) ([]stri
 	return allPaths, nil
 }
 
+func (r *RoleManager) Menu(ctx context.Context, paths []string) []MenuTree {
+	return r.convertPathsToStructure(paths)
+}
+
+// convertPathsToStructure 将路径数组转换为所需的结构
+func (r *RoleManager) convertPathsToStructure(paths []string) []MenuTree {
+	var mTree []MenuTree
+
+	for _, path := range paths {
+		// 去除路径前的斜杠，并拆分路径
+		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+
+		if len(parts) != 4 {
+			fmt.Println("Invalid path format:", path)
+			continue
+		}
+
+		// 构建主菜单名称
+		mainMenuName := fmt.Sprintf("menu.%s._name", strings.Join(parts[:len(parts)-1], "."))
+
+		// 构建子菜单名称
+		subMenuName := fmt.Sprintf("menu.%s", strings.Join(parts, "."))
+
+		// 创建并追加 MenuTree 实例
+		mTree = append(mTree, MenuTree{
+			Name:    mainMenuName,
+			SubMenu: []string{subMenuName},
+		})
+	}
+
+	return mTree
+}
+
 func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string, expect cst.Permission) (bool, error) {
 	for _, i := range roles {
 		roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, i)
