@@ -59,7 +59,7 @@ type ApiDetail struct {
 	//Disable       bool   `json:"disable"`
 	//CanViewDetail bool   `json:"can_view_detail"`
 	//HideOnSidebar bool   `json:"hide_on_sidebar"`
-	AppID string `json:"-" bson:"app_id"`
+	AppID string `json:"app_id" bson:"app_id"`
 }
 
 // CheckAttr 检查是否启用了特定的权限
