@@ -194,13 +194,13 @@ func (r *RoleManager) Menu(ctx context.Context, paths []string) []MenuTree {
 
 // convertPathsToStructure 将路径数组转换为所需的结构
 func (r *RoleManager) convertPathsToStructure(paths []string) []MenuTree {
-	var mTree []MenuTree
+	menuMap := make(map[string][]string)
 
 	for _, path := range paths {
 		// 去除路径前的斜杠，并拆分路径
 		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
-		if len(parts) != 4 {
+		if len(parts) != 5 {
 			fmt.Println("Invalid path format:", path)
 			continue
 		}
@@ -211,13 +211,18 @@ func (r *RoleManager) convertPathsToStructure(paths []string) []MenuTree {
 		// 构建子菜单名称
 		subMenuName := fmt.Sprintf("menu.%s", strings.Join(parts, "."))
 
-		// 创建并追加 MenuTree 实例
-		mTree = append(mTree, MenuTree{
-			Name:    mainMenuName,
-			SubMenu: []string{subMenuName},
-		})
+		// 将子菜单名称添加到主菜单名称对应的列表中
+		menuMap[mainMenuName] = append(menuMap[mainMenuName], subMenuName)
 	}
 
+	// 构建最终的 MTree 列表
+	var mTree []MenuTree
+	for mainMenuName, subMenuList := range menuMap {
+		mTree = append(mTree, MenuTree{
+			Name:    mainMenuName,
+			SubMenu: subMenuList,
+		})
+	}
 	return mTree
 }
 
