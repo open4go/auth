@@ -254,6 +254,10 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 		// 则不必继续检查其他角色，直接返回
 		// 使用位操作检查权限位是否匹配
 		if roleAttr&int(expect) == int(expect) {
+			log.Log(ctx).WithField("role", i).
+				WithField("path", path).
+				WithField("expect", expect).
+				Debug("hit role successful")
 			return true, nil
 		}
 	}
