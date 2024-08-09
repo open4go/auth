@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/net/context"
 	"strings"
+	"time"
 )
 
 // RoleManager 角色管理
@@ -153,7 +154,44 @@ func (r *RoleManager) setRoles(ctx context.Context, account string, roles []*rol
 			return err
 		}
 	}
+	// 默认两个小时过期
+	err := GetRedisAuthHandler(ctx).Expire(ctx, roleKey, time.Hour*2).Err()
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (r *RoleManager) IsOnline(ctx context.Context, account string) bool {
+	roleKey := fmt.Sprintf("%s:account:to:role:%s", r.RedisPrefix, account)
+	result, err := GetRedisAuthHandler(ctx).Exists(ctx, roleKey).Result()
+	if err != nil {
+		return false
+	}
+	// 返回1 则表示存在
+	return result == 1
+}
+
+// KeepAlive 当用户有操作行为则，继续保持key的生命周期延续2小时
+func (r *RoleManager) KeepAlive(ctx context.Context, account string) error {
+	roleKey := fmt.Sprintf("%s:account:to:role:%s", r.RedisPrefix, account)
+	err := GetRedisAuthHandler(ctx).Expire(ctx, roleKey, time.Hour*2).Err()
+	if err != nil {
+		return err
+	}
+	// 返回1 则表示存在
+	return nil
+}
+
+// OnlineTime 在线时长统计
+func (r *RoleManager) OnlineTime(ctx context.Context, account string) (time.Duration, error) {
+	roleKey := fmt.Sprintf("%s:account:to:role:%s", r.RedisPrefix, account)
+	t, err := GetRedisAuthHandler(ctx).TTL(ctx, roleKey).Result()
+	if err != nil {
+		return 0, err
+	}
+	// 返回1 则表示存在
+	return t, nil
 }
 
 func (r *RoleManager) fetchRolesFromCache(ctx context.Context, account string) ([]string, error) {
