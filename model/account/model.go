@@ -66,4 +66,22 @@ type Model struct {
 	OtpVerified bool   `json:"opt_verified" bson:"opt_verified"`
 	OtpSecret   string `json:"opt_secret" bson:"opt_secret"`
 	OtpAuthUrl  string `json:"opt_auth_url" bson:"opt_auth_url"`
+
+	// 	登陆信息
+	LoginInfo LoginInfoType `json:"login_info" bson:"login_info"`
+}
+
+type LoginInfoType struct {
+	// CurrentIPAddr 当前登陆ip
+	CurrentIPAddr string `json:"current_ip_addr"  bson:"current_ip_addr"`
+	// LastIPAddr 上一次登陆ip
+	LastIPAddr string `json:"last_ip_addr"  bson:"last_ip_addr"`
+	// LoginCount 登陆次数
+	LoginCount string `json:"login_count"  bson:"login_count"`
+	// LoginTime 登陆时长（秒）
+	LoginTime string `json:"login_time"  bson:"login_time"`
+	// LastDeviceInfo 登陆时长（秒）
+	CurrentDeviceInfo string `json:"current_device_info"  bson:"current_device_info"`
+	// LastDeviceInfo 登陆时长（秒）
+	LastDeviceInfo string `json:"last_device_info"  bson:"last_device_info"`
 }
