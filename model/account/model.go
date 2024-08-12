@@ -69,6 +69,9 @@ type Model struct {
 
 	// 	登陆信息
 	LoginInfo LoginInfoType `json:"login_info" bson:"login_info"`
+
+	// 安全信息（不直接存储到库里）
+	SafeInfo SafeInfoType `json:"safe" bson:"-"`
 }
 
 type LoginInfoType struct {
@@ -84,4 +87,9 @@ type LoginInfoType struct {
 	CurrentDeviceInfo string `json:"current_device_info"  bson:"current_device_info"`
 	// LastDeviceInfo 登陆时长（秒）
 	LastDeviceInfo string `json:"last_device_info"  bson:"last_device_info"`
+}
+
+type SafeInfoType struct {
+	// 仅用于读取前端参数
+	Password string `json:"password"  bson:"-"`
 }
