@@ -5,6 +5,24 @@ import (
 	"encoding/json"
 )
 
+type LoginInfo struct {
+	// 命名空间
+	// 可是商户号
+	Namespace string `json:"namespace"`
+	// 账号id
+	AccountId string `json:"account_id"  bson:"account_id"`
+	// 可以是手机号
+	UserId string `json:"user_id"  bson:"user_id"`
+	// 用户名
+	UserName string `json:"user_name"  bson:"user_name"`
+	// Avatar 用户头像
+	Avatar string `json:"avatar"`
+	// LoginType 登陆类型
+	LoginType string `json:"login_type"  bson:"login_type"`
+	// LoginLevel 登陆用户等级
+	LoginLevel string `json:"login_level"  bson:"login_level"`
+}
+
 // DumpLoginInfo 登陆信息
 func DumpLoginInfo(namespace string, userId string, avatar string,
 	loginType string, userName string, accountId string, loginLevel string) (string, error) {

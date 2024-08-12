@@ -253,7 +253,7 @@ func (r *RoleManager) convertPathsToStructure(paths2Attr map[string]int) []MenuT
 		// 去除路径前的斜杠，并拆分路径
 		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
-		if len(parts) != 5 {
+		if len(parts) != 4 {
 			fmt.Println("Invalid path format:", path)
 			continue
 		}
