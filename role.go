@@ -123,6 +123,15 @@ func (r *RoleManager) SignIn(ctx context.Context, accountId string, roles []stri
 	return nil
 }
 
+func (r *RoleManager) SignOut(ctx context.Context, accountId string) error {
+	roleKey := fmt.Sprintf("%s:account:to:role:%s", r.RedisPrefix, accountId)
+	err := GetRedisAuthHandler(ctx).Expire(ctx, roleKey, time.Second*10).Err()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Verify 设置缓存避免重复查询用户角色
 // 仅当用户角色发生更新后再进行查询同步到redis
 func (r *RoleManager) Verify(ctx context.Context, path string, accountId string, method string, isSingleResource bool) (bool, error) {
