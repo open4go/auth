@@ -80,9 +80,9 @@ type LoginInfoType struct {
 	// LastIPAddr 上一次登陆ip
 	LastIPAddr string `json:"last_ip_addr"  bson:"last_ip_addr"`
 	// LoginCount 登陆次数
-	LoginCount string `json:"login_count"  bson:"login_count"`
+	LoginCount uint `json:"login_count"  bson:"login_count"`
 	// LoginTime 登陆时长（秒）
-	LoginTime string `json:"login_time"  bson:"login_time"`
+	LoginTime uint `json:"login_time"  bson:"login_time"`
 	// LastDeviceInfo 登陆时长（秒）
 	CurrentDeviceInfo string `json:"current_device_info"  bson:"current_device_info"`
 	// LastDeviceInfo 登陆时长（秒）
