@@ -269,7 +269,9 @@ func (r *RoleManager) convertPathsToStructure(paths2Attr map[string]int) []MenuT
 
 		// 构建主菜单名称
 		// 只取 /版本/命名空间/服务名 （作为主目录）
-		mainMenuName := fmt.Sprintf("menu.%s._name", strings.Join(parts[:len(parts)-2], "."))
+		// 例如：/v1/system/auth/account
+		// 那么：v1.system.auth 作为服务名/即主目录名
+		mainMenuName := fmt.Sprintf("menu.%s._name", strings.Join(parts[:len(parts)-1], "."))
 
 		// 构建子菜单名称
 		subMenuName := fmt.Sprintf("menu.%s", strings.Join(parts, "."))
