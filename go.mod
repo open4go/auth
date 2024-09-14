@@ -6,7 +6,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/open4go/db v0.0.6
-	github.com/open4go/log v0.0.12
+	github.com/open4go/log v0.0.16
 	github.com/open4go/model v0.0.15
 	github.com/open4go/req5rsp v0.1.30
 	github.com/r2day/auth v0.0.3
