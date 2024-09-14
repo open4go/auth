@@ -3,19 +3,15 @@ module github.com/open4go/auth
 go 1.21.5
 
 require (
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gin-gonic/gin v1.9.1
 	github.com/open4go/db v0.0.6
 	github.com/open4go/log v0.0.16
 	github.com/open4go/model v0.0.15
 	github.com/open4go/req5rsp v0.1.30
-	github.com/r2day/auth v0.0.3
-	github.com/r2day/base v1.6.7
-	github.com/r2day/collections v1.1.3
 	github.com/redis/go-redis/v9 v9.0.5
-	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.12.0
 	go.mongodb.org/mongo-driver v1.15.0
+	golang.org/x/net v0.25.0
 )
 
 require (
@@ -61,8 +57,9 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/r2day/base v1.6.7 // indirect
 	github.com/r2day/db v0.3.5 // indirect
-	github.com/r2day/rest v0.2.8 // indirect
+	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -82,7 +79,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
