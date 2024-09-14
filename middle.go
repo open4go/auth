@@ -10,7 +10,7 @@ import (
 func handleSingleResource(c *gin.Context) bool {
 	// 检查路由参数 id 是否存在
 	id := c.Param("_id")
-	log.Log(c.Request.Context()).WithField("_id", id).Debug("Checking for single resource with parameter _id")
+	//log.Log(c.Request.Context()).WithField("_id", id).Debug("Checking for single resource with parameter _id")
 	return id != ""
 }
 

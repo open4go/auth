@@ -140,9 +140,9 @@ func (r *RoleManager) Verify(ctx context.Context, path string, accountId string,
 		return false, err
 	}
 
-	log.Log(ctx).WithField("method", method).WithField("path", path).Debug("check the params =====")
+	//log.Log(ctx).WithField("method", method).WithField("path", path).Debug("check the params =====")
 	p := translateHTTPMethodToPermission(method, isSingleResource)
-	// TODO 这里需要将p的值进行<< 左移运算
+	// T这里需要将p的值进行<< 左移运算
 	isCanAccess, err := r.canAccess(ctx, rolesOfThisAccount, path, p)
 	if err != nil {
 		return false, err
@@ -235,7 +235,7 @@ func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) (map[st
 		for _, path := range paths {
 			roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, i, path)
 			if err2 != nil {
-				log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
+				//log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
 				continue
 			}
 			path2attr[path] = roleAttr | path2attr[path]
@@ -295,7 +295,7 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 	for _, i := range roles {
 		roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, i, path)
 		if err2 != nil {
-			log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
+			//log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
 			continue
 		}
 
@@ -303,10 +303,10 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 		// 则不必继续检查其他角色，直接返回
 		// 使用位操作检查权限位是否匹配
 		if roleAttr&int(expect) == int(expect) {
-			log.Log(ctx).WithField("role", i).
-				WithField("path", path).
-				WithField("expect", expect).
-				Debug("hit role successful")
+			//log.Log(ctx).WithField("role", i).
+			//	WithField("path", path).
+			//	WithField("expect", expect).
+			//	Debug("hit role successful")
 			return true, nil
 		}
 	}
