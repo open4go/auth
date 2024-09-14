@@ -319,8 +319,8 @@ func (r *RoleManager) getAttrByPathAndRole(ctx context.Context, role string, pat
 	roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, role)
 	roleAttr, err := GetRedisAuthHandler(ctx).HGet(ctx, roleKey, path).Int()
 	if err != nil {
-		log.Log(ctx).WithField("key", roleKey).
-			Error(err)
+		//log.Log(ctx).WithField("key", roleKey).
+		//	Debug(err)
 		// try next role
 		// 检查下一个角色是否有操作权限
 		return 0, false, err
@@ -368,7 +368,7 @@ func translateHTTPMethodToPermission(method string, isSingleResource bool) cst.P
 		case "PUT", "PATCH":
 			return cst.Update
 		case "GET":
-			log.Log(context.TODO()).WithField("method", "GET").Info("hit method ============")
+			//log.Log(context.TODO()).WithField("method", "GET").Debug("hit method ============")
 			return cst.Read
 		}
 	} else {
