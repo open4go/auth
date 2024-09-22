@@ -4,7 +4,7 @@ go 1.21.5
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/open4go/db v0.0.6
+	github.com/open4go/db v0.0.10
 	github.com/open4go/log v0.0.16
 	github.com/open4go/model v0.0.15
 	github.com/open4go/req5rsp v0.1.30
