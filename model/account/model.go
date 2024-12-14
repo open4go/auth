@@ -72,6 +72,9 @@ type Model struct {
 
 	// 安全信息（不直接存储到库里）
 	SafeInfo SafeInfoType `json:"safe" bson:"-"`
+
+	// 头像信息
+	Avatar string `json:"avatar"  bson:"avatar"`
 }
 
 type LoginInfoType struct {
