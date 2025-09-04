@@ -33,6 +33,7 @@ type Model struct {
 	Settings     Setting            `bson:"settings" json:"settings"`
 	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
 	UpdatedAt    time.Time          `bson:"updated_at" json:"updated_at"`
+	Phone        string             `bson:"phone" json:"phone"` // 手机号/用户等了
 }
 
 // Setting 租户设置
