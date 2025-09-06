@@ -263,7 +263,7 @@ func (r *RoleManager) convertPathsToStructure(paths2Attr map[string]int) []MenuT
 		parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 
 		if len(parts) != 4 {
-			fmt.Println("Invalid path format:", path)
+			log.Log(context.TODO()).WithField("path", path).Debug("Invalid path format so ignore")
 			continue
 		}
 
