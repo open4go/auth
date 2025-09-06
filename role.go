@@ -116,8 +116,10 @@ func (r *RoleManager) SignIn(ctx context.Context, accountId string, roles []stri
 		log.Log(ctx).Error(err)
 		return err
 	}
+	log.Log(ctx).WithField("roleIds", roles).WithField("roleModel", roleModel).Debug("before setRoles")
 	err = r.setRoles(ctx, accountId, roleModel)
 	if err != nil {
+		log.Log(ctx).WithField("roleIds", roles).WithField("roleModel", roleModel).Error("call setRoles")
 		return err
 	}
 	return nil
