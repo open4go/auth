@@ -24,18 +24,28 @@ type Model struct {
 	model.Model `json:"_" bson:"_"`
 	// 基本的数据库模型字段，一般情况所有model都应该包含如下字段
 	// 创建时（用户上传的数据为空，所以默认可以不传该值)
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Name         string             `bson:"name" json:"name"`
-	MerchantID   string             `bson:"merchant_id" json:"merchant_id"` // 唯一标识符
-	Status       string             `bson:"status" json:"status"`           // active, suspended, pending
-	CustomDomain string             `bson:"custom_domain" json:"custom_domain"`
-	Plan         string             `bson:"plan" json:"plan"` // 套餐类型
-	Settings     Setting            `bson:"settings" json:"settings"`
-	CreatedAt    time.Time          `bson:"created_at" json:"created_at"`
-	UpdatedAt    time.Time          `bson:"updated_at" json:"updated_at"`
-	Phone        string             `bson:"phone" json:"phone"`             // 手机号/用户等了
-	RootManage   string             `bson:"root_manage" json:"root_manage"` // 创建者账号
-	Manager      []string           `bson:"manager" json:"manager"`         // 所有管理员包括创建者账号
+	ID           primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	Name         string              `bson:"name" json:"name"`
+	MerchantID   string              `bson:"merchant_id" json:"merchant_id"` // 唯一标识符
+	Status       string              `bson:"status" json:"status"`           // active, suspended, pending
+	CustomDomain string              `bson:"custom_domain" json:"custom_domain"`
+	Plan         string              `bson:"plan" json:"plan"` // 套餐类型
+	Settings     Setting             `bson:"settings" json:"settings"`
+	CreatedAt    time.Time           `bson:"created_at" json:"created_at"`
+	UpdatedAt    time.Time           `bson:"updated_at" json:"updated_at"`
+	Phone        string              `bson:"phone" json:"phone"`             // 手机号/用户等了
+	RootManage   string              `bson:"root_manage" json:"root_manage"` // 创建者账号
+	Manager      []string            `bson:"manager" json:"manager"`         // 所有管理员包括创建者账号
+	Domain       []DomainWithService `bson:"domain" json:"domain"`           // 所有域名
+	CloneFrom    string              `bson:"clone_from" json:"clone_from"`   // 需要从那个商户进行克隆（对应的商户id）
+}
+
+// DomainWithService  子站域名
+// 域名只有站点激活的时候才进行提交绑定到 apiSix 中
+type DomainWithService struct {
+	Service string `bson:"service" json:"service"`
+	Domain  string `bson:"domain" json:"domain"`
+	Type    string `bson:"type" json:"type"`
 }
 
 // Setting 租户设置
