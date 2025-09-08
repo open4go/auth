@@ -36,7 +36,7 @@ type Model struct {
 	Phone        string              `bson:"phone" json:"phone"`             // 手机号/用户等了
 	RootManage   string              `bson:"root_manage" json:"root_manage"` // 创建者账号
 	Manager      []string            `bson:"manager" json:"manager"`         // 所有管理员包括创建者账号
-	Domain       []DomainWithService `bson:"domain" json:"domain"`           // 所有域名
+	Domain       []DomainWithService `bson:"domains" json:"domains"`         // 所有域名
 	CloneFrom    string              `bson:"clone_from" json:"clone_from"`   // 需要从那个商户进行克隆（对应的商户id）
 }
 
@@ -45,7 +45,7 @@ type Model struct {
 type DomainWithService struct {
 	Service string `bson:"service" json:"service"`
 	Domain  string `bson:"domain" json:"domain"`
-	Type    string `bson:"type" json:"type"`
+	Type    int    `bson:"type" json:"type"`
 }
 
 // Setting 租户设置
