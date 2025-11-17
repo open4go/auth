@@ -1,12 +1,12 @@
 module github.com/open4go/auth
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/open4go/db v0.0.10
 	github.com/open4go/log v0.0.16
-	github.com/open4go/model v0.0.20
+	github.com/open4go/model v0.0.24
 	github.com/open4go/req5rsp v0.1.30
 	github.com/redis/go-redis/v9 v9.0.5
 	github.com/spf13/viper v1.12.0
