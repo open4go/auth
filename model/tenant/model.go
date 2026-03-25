@@ -38,6 +38,12 @@ type Model struct {
 	Manager      []string            `bson:"manager" json:"manager"`         // 所有管理员包括创建者账号
 	Domain       []DomainWithService `bson:"domains" json:"domains"`         // 所有域名
 	CloneFrom    string              `bson:"clone_from" json:"clone_from"`   // 需要从那个商户进行克隆（对应的商户id）
+	// Address 地址
+	Address string `bson:"address" json:"address"`
+	// industry 行业
+	Industry string `bson:"industry" json:"industry"`
+	// SelfDomain 是否使用独立域名
+	SelfDomain bool `bson:"selfDomain" json:"selfDomain"`
 }
 
 // DomainWithService  子站域名
