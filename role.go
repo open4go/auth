@@ -216,6 +216,10 @@ func (r *RoleManager) fetchRolesFromCache(ctx context.Context, account string) (
 	return roles, nil
 }
 
+func (r *RoleManager) MyRoles(ctx context.Context, account string) ([]string, error) {
+	return r.fetchRolesFromCache(ctx, account)
+}
+
 // FetchAllPaths 获取路径key
 func (r *RoleManager) FetchAllPaths(ctx context.Context, account string) (map[string]int, []string, error) {
 	roles, err := r.fetchRolesFromCache(ctx, account)
