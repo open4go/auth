@@ -35,6 +35,7 @@ type Model struct {
 	Server    string      `json:"server"`
 	Prefix    string      `json:"prefix"`
 	AccessApi []ApiDetail `json:"api" bson:"api"`
+	Subscribe string      `json:"subscribe"`
 }
 
 // ApiDetail 接口详情
