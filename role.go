@@ -90,6 +90,34 @@ func (r *RoleManager) loadRoles(ctx context.Context, roles []*role.Model) error 
 	return nil
 }
 
+// reloadRoles 重新加载所有角色的权限（推荐全量替换）
+func (r *RoleManager) reloadRoles(ctx context.Context, roles []*role.Model) error {
+	redisClient := GetRedisAuthHandler(ctx)
+
+	for _, roleModel := range roles {
+		roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, roleModel.ID.Hex())
+
+		// 【关键】先删除旧的整个 Hash，避免残留已删除的权限
+		if err := redisClient.Del(ctx, roleKey).Err(); err != nil {
+			log.Log(ctx).WithField("key", roleKey).Error(err)
+			// 可以继续，不一定返回错误
+		}
+
+		// 写入新的权限
+		for _, api := range roleModel.ApiDetail {
+			err := redisClient.HSet(ctx, roleKey, api.Path, uint(api.Attr)).Err()
+			if err != nil {
+				log.Log(ctx).WithField("key", roleKey).WithField("path", api.Path).Error(err)
+				return err
+			}
+		}
+
+		// 可选：设置过期时间（防止数据长期不更新）
+		redisClient.Expire(ctx, roleKey, time.Hour*24)
+	}
+	return nil
+}
+
 // fetchPathsByRoleID 设置缓存避免重复查询用户角色
 // 仅当用户角色发生更新后再进行查询同步到redis
 func (r *RoleManager) fetchPathsByRoleID(ctx context.Context, role string) ([]string, error) {
@@ -334,18 +362,22 @@ func (r *RoleManager) getAttrByPathAndRole(ctx context.Context, role string, pat
 	return roleAttr, false, nil
 }
 
-// Reload 当系统初始化/重启或者更新角色信息
-// 新增角色时就会触发，使内存中始终保持最新的角色信息
+// Reload 完全重新加载角色权限
 func (r *RoleManager) Reload(ctx context.Context) {
+	log.Log(ctx).Info("Starting RoleManager full reload...")
+
 	allRoles, err := r.fetchRoleList(ctx)
 	if err != nil {
 		log.Log(ctx).Error(err)
 		return
 	}
-	err = r.loadRoles(ctx, allRoles)
-	if err != nil {
+
+	if err = r.reloadRoles(ctx, allRoles); err != nil {
+		log.Log(ctx).Error("loadRoles failed")
 		return
 	}
+
+	log.Log(ctx).WithField("roleCount", len(allRoles)).Info("RoleManager reload completed successfully")
 }
 
 func covertSliceToObjectID(ctx context.Context, slice []string) []*primitive.ObjectID {
