@@ -113,7 +113,7 @@ func (r *RoleManager) reloadRoles(ctx context.Context, roles []*role.Model) erro
 		}
 
 		// 可选：设置过期时间（防止数据长期不更新）
-		redisClient.Expire(ctx, roleKey, time.Hour*24)
+		//redisClient.Expire(ctx, roleKey, time.Hour*24)
 	}
 	return nil
 }
