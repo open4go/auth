@@ -1,16 +1,19 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/open4go/auth/model/app"
 	"github.com/open4go/auth/model/role"
 	"github.com/open4go/log"
 	"github.com/open4go/req5rsp/cst"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/net/context"
-	"strings"
-	"time"
 )
 
 // RoleManager 角色管理
@@ -162,19 +165,56 @@ func (r *RoleManager) SignOut(ctx context.Context, accountId string) error {
 	return nil
 }
 
-// Verify 设置缓存避免重复查询用户角色
-// 仅当用户角色发生更新后再进行查询同步到redis
+// Verify 校验账户是否有权访问 path。
+// WebSocket 接口强制按 GET 校验：具备 List 或 Read 任一即可。
 func (r *RoleManager) Verify(ctx context.Context, path string, accountId string, method string, isSingleResource bool) (bool, error) {
+	isWS := wsFlagFromCtx(ctx) || isWSEndpoint(path)
+	checkMethod := method
+	if isWS {
+		checkMethod = "GET"
+	}
+
 	rolesOfThisAccount, err := r.fetchRolesFromCache(ctx, accountId)
 	if err != nil {
+		log.Log(ctx).
+			WithField("path", path).
+			WithField("accountId", accountId).
+			WithField("method", method).
+			WithField("is_ws", isWS).
+			WithField("error", err).
+			Error("Verify: failed to load account roles from cache")
 		return false, err
 	}
 
-	//log.Log(ctx).WithField("method", method).WithField("path", path).Debug("check the params =====")
-	p := translateHTTPMethodToPermission(method, isSingleResource)
-	// T这里需要将p的值进行<< 左移运算
-	isCanAccess, err := r.canAccess(ctx, rolesOfThisAccount, path, p)
+	p := translateHTTPMethodToPermission(checkMethod, isSingleResource)
+	log.Log(ctx).
+		WithField("path", path).
+		WithField("accountId", accountId).
+		WithField("request_method", method).
+		WithField("check_method", checkMethod).
+		WithField("is_ws", isWS).
+		WithField("is_single_resource", isSingleResource).
+		WithField("expect_perm", formatPermission(int(p))).
+		WithField("roles", rolesOfThisAccount).
+		Debug("Verify: start permission check")
+
+	if len(rolesOfThisAccount) == 0 {
+		log.Log(ctx).
+			WithField("path", path).
+			WithField("accountId", accountId).
+			WithField("is_ws", isWS).
+			Error("Verify: account has no roles in cache (not signed in, or role cache expired)")
+		return false, nil
+	}
+
+	isCanAccess, err := r.canAccess(ctx, rolesOfThisAccount, path, p, isWS)
 	if err != nil {
+		log.Log(ctx).
+			WithField("path", path).
+			WithField("accountId", accountId).
+			WithField("is_ws", isWS).
+			WithField("error", err).
+			Error("Verify: canAccess failed")
 		return false, err
 	}
 	return isCanAccess, nil
@@ -325,27 +365,75 @@ func (r *RoleManager) convertPathsToStructure(paths2Attr map[string]int) []MenuT
 	return mTree
 }
 
-func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string, expect cst.Permission) (bool, error) {
-	for _, i := range roles {
-		roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, i, path)
+func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string, expect cst.Permission, isWS bool) (bool, error) {
+	pathHits := make([]string, 0)
+	missRoles := make([]string, 0)
+	bitMismatch := make([]string, 0)
+	var lastRedisErr error
+	redisErrCount := 0
+
+	for _, roleID := range roles {
+		roleAttr, _, err2 := r.getAttrByPathAndRole(ctx, roleID, path)
 		if err2 != nil {
-			//log.Log(ctx).WithField("i", i).WithField("path", path).Debug("this role no match, try next")
+			if !errors.Is(err2, redis.Nil) {
+				redisErrCount++
+				lastRedisErr = err2
+				log.Log(ctx).
+					WithField("role", roleID).
+					WithField("path", path).
+					WithField("error", err2).
+					Error("canAccess: failed to read role permission from redis")
+			} else {
+				missRoles = append(missRoles, roleID)
+			}
 			continue
 		}
 
-		// 如果当前角色的权限已经满足通行
-		// 则不必继续检查其他角色，直接返回
-		// 使用位操作检查权限位是否匹配
-		if roleAttr&int(expect) == int(expect) {
-			//log.Log(ctx).WithField("role", i).
-			//	WithField("path", path).
-			//	WithField("expect", expect).
-			//	Debug("hit role successful")
+		pathHits = append(pathHits, fmt.Sprintf("%s=%s", roleID, formatPermission(roleAttr)))
+
+		allowed := false
+		if isWS {
+			// WS 只需 GET：List（集合 GET）或 Read（单资源 GET）任一即可
+			allowed = hasGETPermission(roleAttr)
+		} else {
+			allowed = roleAttr&int(expect) == int(expect)
+		}
+		if allowed {
+			log.Log(ctx).
+				WithField("role", roleID).
+				WithField("path", path).
+				WithField("is_ws", isWS).
+				WithField("role_attr", formatPermission(roleAttr)).
+				WithField("expect_perm", formatPermission(int(expect))).
+				Debug("canAccess: permission granted")
 			return true, nil
 		}
+		bitMismatch = append(bitMismatch, fmt.Sprintf("%s=%s", roleID, formatPermission(roleAttr)))
 	}
-	// 没有任何一个角色满足
-	// 因此返回false
+
+	if redisErrCount == len(roles) && lastRedisErr != nil {
+		return false, lastRedisErr
+	}
+
+	reason := "path not found in any role permission hash"
+	if len(pathHits) > 0 {
+		if isWS {
+			reason = "path found but role has neither List nor Read (GET) permission"
+		} else {
+			reason = "path found but required permission bits are missing"
+		}
+	}
+
+	log.Log(ctx).
+		WithField("path", path).
+		WithField("is_ws", isWS).
+		WithField("expect_perm", formatPermission(int(expect))).
+		WithField("roles", roles).
+		WithField("path_hits", pathHits).
+		WithField("bit_mismatch", bitMismatch).
+		WithField("roles_without_path", missRoles).
+		WithField("reason", reason).
+		Error("canAccess: access denied")
 	return false, nil
 }
 
@@ -353,10 +441,6 @@ func (r *RoleManager) getAttrByPathAndRole(ctx context.Context, role string, pat
 	roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, role)
 	roleAttr, err := GetRedisAuthHandler(ctx).HGet(ctx, roleKey, path).Int()
 	if err != nil {
-		//log.Log(ctx).WithField("key", roleKey).
-		//	Debug(err)
-		// try next role
-		// 检查下一个角色是否有操作权限
 		return 0, false, err
 	}
 	return roleAttr, false, nil
