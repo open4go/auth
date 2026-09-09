@@ -38,8 +38,12 @@ type Model struct {
 	// 如果是其他的模式，一般需要超级商户平台授权后才能成为管理员
 	IsAdmin bool `json:"is_admin"  bson:"is_admin"`
 	// 关键信息
-	// 手机号
-	Phone string `json:"phone"`
+	// 手机号（新记录存空，接口返回脱敏值）
+	Phone       string `json:"phone" bson:"phone"`
+	PhoneEnc    string `json:"-" bson:"phone_enc,omitempty"`
+	PhoneHash   string `json:"-" bson:"phone_hash,omitempty"`
+	PhoneSuffix string `json:"phone_suffix,omitempty" bson:"phone_suffix,omitempty"`
+	PhoneSec    string `json:"-" bson:"phone_sec,omitempty"`
 	// 用户id 在这个表中使用userId
 	// 但是在内部的meta.account_id 是一样的值
 	// 但是meta 值是登陆者操作的人的id
@@ -53,8 +57,11 @@ type Model struct {
 	Name string `json:"name"`
 	// 描述
 	Desc string `json:"desc"  bson:"desc"`
-	// 邮箱
-	Email string `json:"email"  bson:"email"`
+	// 邮箱（新记录存空，接口返回脱敏值）
+	Email     string `json:"email" bson:"email"`
+	EmailEnc  string `json:"-" bson:"email_enc,omitempty"`
+	EmailHash string `json:"-" bson:"email_hash,omitempty"`
+	EmailSec  string `json:"-" bson:"email_sec,omitempty"`
 	// 角色id列表
 	RoleID []string `json:"roles"  bson:"roles"`
 	// 角色名称列表
