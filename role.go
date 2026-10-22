@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -168,10 +169,17 @@ func (r *RoleManager) SignOut(ctx context.Context, accountId string) error {
 // Verify 校验账户是否有权访问 path。
 // WebSocket 接口强制按 GET 校验：具备 List 或 Read 任一即可。
 func (r *RoleManager) Verify(ctx context.Context, path string, accountId string, method string, isSingleResource bool) (bool, error) {
-	isWS := wsFlagFromCtx(ctx) || isWSEndpoint(path)
-	checkMethod := method
-	if isWS {
-		checkMethod = "GET"
+	checkMethod, isWS := resolveCheckMethod(ctx, path, method)
+	p := translateHTTPMethodToPermission(checkMethod, isSingleResource)
+	if p == 0 && !isWS {
+		// 默认拒绝：未映射的方法不放行
+		log.Log(ctx).
+			WithField("path", path).
+			WithField("accountId", accountId).
+			WithField("method", method).
+			WithField("is_single_resource", isSingleResource).
+			Error("Verify: method not mapped to any permission, denied")
+		return false, nil
 	}
 
 	rolesOfThisAccount, err := r.fetchRolesFromCache(ctx, accountId)
@@ -186,7 +194,6 @@ func (r *RoleManager) Verify(ctx context.Context, path string, accountId string,
 		return false, err
 	}
 
-	p := translateHTTPMethodToPermission(checkMethod, isSingleResource)
 	log.Log(ctx).
 		WithField("path", path).
 		WithField("accountId", accountId).
@@ -391,13 +398,7 @@ func (r *RoleManager) canAccess(ctx context.Context, roles []string, path string
 
 		pathHits = append(pathHits, fmt.Sprintf("%s=%s", roleID, formatPermission(roleAttr)))
 
-		allowed := false
-		if isWS {
-			// WS 只需 GET：List（集合 GET）或 Read（单资源 GET）任一即可
-			allowed = hasGETPermission(roleAttr)
-		} else {
-			allowed = roleAttr&int(expect) == int(expect)
-		}
+		allowed := permAllowed(roleAttr, expect, isWS)
 		if allowed {
 			log.Log(ctx).
 				WithField("role", roleID).
@@ -478,19 +479,45 @@ func covertSliceToObjectID(ctx context.Context, slice []string) []*primitive.Obj
 	return objIds
 }
 
+// resolveCheckMethod 归一化校验用的方法，并判断是否按 WebSocket 规则校验。
+// 只有 GET（HEAD 视同 GET）才可能按 WS 规则校验，其它方法一律按原方法校验。
+func resolveCheckMethod(ctx context.Context, path, method string) (string, bool) {
+	checkMethod := strings.ToUpper(strings.TrimSpace(method))
+	if checkMethod == http.MethodHead {
+		checkMethod = http.MethodGet
+	}
+	isWS := checkMethod == http.MethodGet && (wsFlagFromCtx(ctx) || isWSEndpoint(path))
+	return checkMethod, isWS
+}
+
+// permAllowed 判断角色权限位是否满足要求；expect 为 0（未映射）时一律拒绝。
+func permAllowed(roleAttr int, expect cst.Permission, isWS bool) bool {
+	if isWS {
+		// WS 只需 GET：List（集合 GET）或 Read（单资源 GET）任一即可
+		return hasGETPermission(roleAttr)
+	}
+	if expect == 0 {
+		return false
+	}
+	return roleAttr&int(expect) == int(expect)
+}
+
 // translateHTTPMethodToPermission 根据HTTP方法和路径来确定权限
 func translateHTTPMethodToPermission(method string, isSingleResource bool) cst.Permission {
 	method = strings.ToUpper(method)
 
 	// 如果路径包含 ':id' 或者其他参数化部分，按特定方式处理
+	if method == "HEAD" {
+		method = "GET"
+	}
 	if isSingleResource {
 		switch method {
 		case "DELETE":
 			return cst.Delete
-		case "PUT", "PATCH":
+		case "PUT", "PATCH", "POST":
+			// POST /:_id 属于对已有资源的动作，按 Update 校验
 			return cst.Update
 		case "GET":
-			//log.Log(context.TODO()).WithField("method", "GET").Debug("hit method ============")
 			return cst.Read
 		}
 	} else {
@@ -500,10 +527,16 @@ func translateHTTPMethodToPermission(method string, isSingleResource bool) cst.P
 			return cst.Create
 		case "GET":
 			return cst.List
+		case "PUT", "PATCH":
+			// 集合级批量修改
+			return cst.Update
+		case "DELETE":
+			// 集合级批量删除
+			return cst.Delete
 		}
 	}
 
-	// 对于不匹配的方法，返回0或其他合适的值
+	// 其它方法（OPTIONS/TRACE/CONNECT/自定义）不映射，调用方必须拒绝
 	return 0
 }
 
