@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/net/context"
 )
 
 // RoleManager 角色管理
@@ -74,25 +74,6 @@ func (r *RoleManager) fetchRoleListByIDs(ctx context.Context, roleID []string) (
 	return s, nil
 }
 
-// 设置缓存避免重复查询用户角色
-// 仅当用户角色发生更新后再进行查询同步到redis
-func (r *RoleManager) loadRoles(ctx context.Context, roles []*role.Model) error {
-	for _, i := range roles {
-		roleKey := fmt.Sprintf("%s:roles:permissions:%s", r.RedisPrefix, i.ID.Hex())
-		for _, j := range i.ApiDetail {
-			// redis: can't marshal cst.Permission
-			// 因此，需要将Attr 转换为uint
-			err := GetRedisAuthHandler(ctx).HSet(ctx, roleKey, j.Path, uint(j.Attr)).Err()
-			if err != nil {
-				log.Log(ctx).WithField("key", roleKey).
-					Error(err)
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // reloadRoles 重新加载所有角色的权限（推荐全量替换）
 func (r *RoleManager) reloadRoles(ctx context.Context, roles []*role.Model) error {
 	redisClient := GetRedisAuthHandler(ctx)
@@ -133,7 +114,7 @@ func (r *RoleManager) fetchPathsByRoleID(ctx context.Context, role string) ([]st
 	}
 
 	paths := make([]string, 0)
-	for path, _ := range results {
+	for path := range results {
 		paths = append(paths, path)
 	}
 	return paths, nil
@@ -509,8 +490,5 @@ func translateHTTPMethodToPermission(method string, isSingleResource bool) cst.P
 
 // 读取redis中的权限信息
 func isShow(roleAttr int) bool {
-	if roleAttr&int(cst.Show) == int(cst.Show) {
-		return true
-	}
-	return false
+	return roleAttr&int(cst.Show) == int(cst.Show)
 }

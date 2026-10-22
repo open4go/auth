@@ -1,54 +1,64 @@
 package log
 
 import (
-	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-	"golang.org/x/net/context"
+	"context"
 	"io"
 	"os"
-	"runtime"
-	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
-
-// getDockerMetadata fetches the Docker container metadata
-func getDockerMetadata() (string, string, string, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		return "", "", "", err
-	}
-
-	ctx := context.Background()
-	containerID := os.Getenv("HOSTNAME")
-	containerJSON, err := cli.ContainerInspect(ctx, containerID)
-	if err != nil {
-		return "", "", "", err
-	}
-
-	return containerJSON.Config.Image, containerJSON.Name, containerID, nil
-}
 
 var logger = logrus.New()
 
-// Init 在main函数中必须初始化
+type buildMeta struct {
+	Image     string
+	GitCommit string
+	GitBranch string
+	BuildTime string
+	Instance  string
+}
+
+var meta = buildMeta{
+	Image:     os.Getenv("IMAGE_TAG"),
+	GitCommit: os.Getenv("GIT_COMMIT"),
+	GitBranch: os.Getenv("GIT_BRANCH"),
+	BuildTime: os.Getenv("BUILD_TIME"),
+	Instance:  os.Getenv("HOSTNAME"),
+}
+
+func init() {
+	logger.SetFormatter(jsonFormatter())
+	logger.SetOutput(os.Stdout)
+	logger.AddHook(locationHook{})
+}
+
+func jsonFormatter() logrus.Formatter {
+	return &logrus.JSONFormatter{
+		TimestampFormat:   "2006-01-02T15:04:05.000Z07:00",
+		DisableHTMLEscape: true,
+	}
+}
+
+// Init configures the process-wide JSON logger. Call once from main.
+// logLevel: debug | test | info | warn | error (unknown falls back to info).
 func Init(logLevel string, output io.Writer) {
 	if output != nil {
 		logger.SetOutput(output)
 	} else {
-		// 输出到终端
 		logger.SetOutput(os.Stdout)
 	}
-	// 强制使用json日志格式
-	logger.SetFormatter(&logrus.JSONFormatter{})
-	// 设置日志级别
-	switch logLevel {
-	case "debug":
+
+	logger.SetFormatter(jsonFormatter())
+	logger.SetReportCaller(false)
+
+	switch strings.ToLower(logLevel) {
+	case "debug", "test":
 		logger.SetLevel(logrus.DebugLevel)
-	case "test":
 	case "info":
 		logger.SetLevel(logrus.InfoLevel)
-	case "warn":
+	case "warn", "warning":
 		logger.SetLevel(logrus.WarnLevel)
 	case "error":
 		logger.SetLevel(logrus.ErrorLevel)
@@ -57,63 +67,105 @@ func Init(logLevel string, output io.Writer) {
 	}
 }
 
+// Logger returns the process-wide logrus logger.
+func Logger() *logrus.Logger {
+	return logger
+}
+
+// Log is the common entry for Info / Debug / Warn / Error.
+// It attaches server, trace, ip, merchant and operator when present.
+// Caller file/func/line are filled when the line is written.
+// Error-level lines also get a cleaned stacktrace.
+// Do not call Fatal from request handlers — Fatal exits the process.
 func Log(ctx context.Context) *logrus.Entry {
-	pc, file, line, ok := runtime.Caller(1)
-	if !ok {
-		panic("Could not get context info for logger!")
+	return getBaseEntry(ctx)
+}
+
+// ErrorWithStack is an alias of Error, kept for callers compiled against
+// older versions of this package.
+func ErrorWithStack(ctx context.Context, err error, args ...interface{}) {
+	Error(ctx, err, args...)
+}
+
+// ErrorfWithStack is an alias of Errorf, kept for older callers.
+func ErrorfWithStack(ctx context.Context, err error, format string, args ...interface{}) {
+	Errorf(ctx, err, format, args...)
+}
+
+// Error writes an error log with caller location and a cleaned stack trace.
+func Error(ctx context.Context, err error, args ...interface{}) {
+	entry := errorEntry(ctx, err)
+	if len(args) == 0 {
+		if err != nil {
+			entry.Error(err)
+			return
+		}
+		entry.Error("error")
+		return
 	}
+	entry.Error(args...)
+}
 
-	serverName := viper.GetString("server.name")
+// Errorf writes a formatted error log with caller location and a cleaned stack trace.
+func Errorf(ctx context.Context, err error, format string, args ...interface{}) {
+	errorEntry(ctx, err).Errorf(format, args...)
+}
 
-	// 拼接必要字段
-	//filename := file[strings.LastIndex(file, "/")+1:] + ":" + strconv.Itoa(line)
-	// Modify how the filename is extracted to include at least /parent/child.go
-	// Split the file path into its components
-	fileParts := strings.Split(file, "/")
-
-	// Get at least two levels (parent/child.go), or just child.go if less
-	var filename string
-	if len(fileParts) > 1 {
-		filename = strings.Join(fileParts[len(fileParts)-2:], "/") + ":" + strconv.Itoa(line)
-	} else {
-		filename = fileParts[0] + ":" + strconv.Itoa(line)
+// WarnWithStack writes a warning with a stack trace.
+func WarnWithStack(ctx context.Context, msg interface{}, args ...interface{}) {
+	entry := getBaseEntry(ctx).WithField(wantStackField, true)
+	if len(args) == 0 {
+		entry.Warn(msg)
+		return
 	}
+	entry.WithFields(logrus.Fields{"details": args}).Warn(msg)
+}
 
-	funcName := runtime.FuncForPC(pc).Name()
-	fn := funcName[strings.LastIndex(funcName, ".")+1:]
+// WarnfWithStack writes a formatted warning with a stack trace.
+func WarnfWithStack(ctx context.Context, format string, args ...interface{}) {
+	getBaseEntry(ctx).WithField(wantStackField, true).Warnf(format, args...)
+}
 
-	logCtx := logger.
-		WithField("file", filename).
-		WithField("func", fn).
-		WithField("server", serverName)
-	// 增加traceid
-	// 部分情况下无法获取到
-	traceID := ctx.Value("traceid")
-	if traceID != "" {
-		logCtx = logCtx.WithField("trace", traceID)
-	}
-	// 增加请求ip
-	ip := ctx.Value("ip")
-	if ip != "" {
-		logCtx = logCtx.WithField("ip", ip)
-	}
-	// 获取镜像元数据
-	image, container, instanceID, err := getDockerMetadata()
+func errorEntry(ctx context.Context, err error) *logrus.Entry {
+	entry := getBaseEntry(ctx)
 	if err != nil {
-		//log.Printf("Failed to get Docker metadata (when run it on local, can ignore this) %v", err)
-		return logCtx
-	} else {
-		// 只有容器中运行才能获取到相关信息
-		// 并且运行的容器需要挂着配置 /var/run/docker.sock
-		// 例如:
-		// services:
-		//  member:
-		//    image: r2day/member-api:pro
-		//    volumes:
-		//      - /var/run/docker.sock:/var/run/docker.sock
-		return logCtx.
-			WithField("image", image).
-			WithField("container", container).
-			WithField("instance", instanceID)
+		entry = entry.WithError(err)
 	}
+	return entry
+}
+
+func getBaseEntry(ctx context.Context) *logrus.Entry {
+	fields := make(logrus.Fields, 12)
+	fields["server"] = viper.GetString("server.name")
+
+	if traceID := TraceID(ctx); traceID != "" {
+		fields["trace"] = traceID
+	}
+	if ip := ClientIP(ctx); ip != "" {
+		fields["ip"] = ip
+	}
+	if merchantId := ctxString(ctx, merchantCtxKey); merchantId != "" {
+		fields["merchantId"] = merchantId
+	}
+	if operator := ctxString(ctx, operatorCtxKey); operator != "" {
+		fields["operator"] = operator
+	}
+
+	if meta.Image != "" {
+		fields["image"] = meta.Image
+	}
+	if meta.GitCommit != "" {
+		fields["git_commit"] = meta.GitCommit
+	}
+	if meta.GitBranch != "" {
+		fields["git_branch"] = meta.GitBranch
+	}
+	if meta.BuildTime != "" {
+		fields["build_time"] = meta.BuildTime
+	}
+	if meta.Instance != "" {
+		fields["instance"] = meta.Instance
+	}
+
+	return logger.WithFields(fields)
 }
