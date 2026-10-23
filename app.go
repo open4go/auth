@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"github.com/open4go/auth/model/app"
 	r2mongo "github.com/open4go/db/mongo"
 	"github.com/open4go/log"
@@ -33,24 +32,6 @@ func NewMyApp(ctx context.Context) MyApp {
 	}
 }
 
-// setNameWithPath 通过请求路径快速设定应用名称
-func (a *MyApp) setNameWithPath(path, name string) error {
-	err := GetRedisAuthHandler(a.Ctx).HSet(a.Ctx, a.GlobalAppKey, path, name).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// getNameByPath 通过请求路径快速找到应用名称
-func (a *MyApp) getNameByPath(path, name string) string {
-	name, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.GlobalAppKey, path).Result()
-	if err != nil {
-		return ""
-	}
-	return name
-}
-
 // GetAllPath 通过请求路径快速找到应用名称
 func (a *MyApp) GetAllPath() map[string]string {
 	name, err := GetRedisAuthHandler(a.Ctx).HGetAll(a.Ctx, a.GlobalAppKey).Result()
@@ -58,26 +39,6 @@ func (a *MyApp) GetAllPath() map[string]string {
 		return nil
 	}
 	return name
-}
-
-// setNameWithPath 通过请求路径快速设定应用属性
-func (a *MyApp) setApiAttribute(path, name string, value interface{}) error {
-	secondKey := fmt.Sprintf("%s:%s", path, name)
-	err := GetRedisAuthHandler(a.Ctx).HSet(a.Ctx, a.GlobalAppAttr, secondKey, value).Err()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// getApiAttribute 通过请求路径快速获取应用属性
-func (a *MyApp) getApiAttribute(path, name string) string {
-	secondKey := fmt.Sprintf("%s:%s", path, name)
-	val, err := GetRedisAuthHandler(a.Ctx).HGet(a.Ctx, a.GlobalAppAttr, secondKey).Result()
-	if err != nil {
-		return val
-	}
-	return val
 }
 
 // LoadAppInfo 加载应用信息
