@@ -87,7 +87,7 @@ func AccessMiddleware() gin.HandlerFunc {
 		}
 
 		if !verify {
-			baseLog.Error("Access denied: user does not have permission to access this endpoint")
+			baseLog.Warn("Access denied: user does not have permission to access this endpoint")
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

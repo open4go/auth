@@ -5,10 +5,11 @@ go 1.26.10
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/open4go/db v0.0.10
-	github.com/open4go/log v0.0.23
+	github.com/open4go/log v0.0.25
 	github.com/open4go/model v0.0.24
 	github.com/open4go/req5rsp v0.1.30
 	github.com/redis/go-redis/v9 v9.0.5
+	github.com/spf13/viper v1.12.0
 	go.mongodb.org/mongo-driver v1.17.7
 )
 
@@ -45,7 +46,6 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.12.0 // indirect
 	github.com/subosito/gotenv v1.3.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
