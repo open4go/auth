@@ -83,16 +83,17 @@ type Model struct {
 	// 头像信息
 	Avatar string `json:"avatar"  bson:"avatar"`
 
-	// Prefs 后台界面偏好，跟账号走（语言、主题、导航）
+	// Prefs 后台界面偏好，跟账号走（语言、主题、导航、字体）
 	Prefs Prefs `json:"prefs" bson:"prefs"`
 }
 
-// Prefs 管理员后台的语言与主题，登录后各端共用
+// Prefs 管理员后台的语言、主题、导航和字体，登录后各端共用
 type Prefs struct {
 	Locale       string `json:"locale" bson:"locale"`
 	ThemeName    string `json:"theme_name" bson:"theme_name"`
 	ThemeMode    string `json:"theme_mode" bson:"theme_mode"` // light | dark | auto
 	SidebarStyle string `json:"sidebar_style" bson:"sidebar_style"`
+	Font         string `json:"font" bson:"font"` // system | song | kai
 }
 
 type LoginInfoType struct {
