@@ -68,6 +68,8 @@ type Model struct {
 	Roles []string `json:"role"  bson:"role"`
 	// IsOnline 是否在线
 	IsOnline bool `json:"is_online" bson:"-"`
+	// IsRoot 是否为某站点业主（租户 root_manage 指向该账号）。不入库，列表和详情计算后返回。
+	IsRoot bool `json:"is_root" bson:"-"`
 
 	OtpEnabled  bool   `json:"opt_enabled" bson:"opt_enabled"`
 	OtpVerified bool   `json:"opt_verified" bson:"opt_verified"`
@@ -82,6 +84,9 @@ type Model struct {
 
 	// 头像信息
 	Avatar string `json:"avatar"  bson:"avatar"`
+
+	// ExpireAt 临时账号到期时间，unix 秒。0 表示长期，到期后登录提示账号已冻结。
+	ExpireAt int64 `json:"expire_at" bson:"expire_at"`
 
 	// Prefs 后台界面偏好，跟账号走（语言、主题、导航、字体）
 	Prefs Prefs `json:"prefs" bson:"prefs"`
