@@ -91,6 +91,9 @@ func AccessMiddleware() gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+		if !checkX6DeviceGuard(c, userID) {
+			return
+		}
 		c.Next()
 	}
 }

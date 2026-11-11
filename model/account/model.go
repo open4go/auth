@@ -79,6 +79,9 @@ type Model struct {
 	// 	登陆信息
 	LoginInfo LoginInfoType `json:"login_info" bson:"login_info"`
 
+	// DeviceGuard x6 点餐机设备白名单。super 开启后仅允许名单内设备下单/支付。
+	DeviceGuard DeviceGuard `json:"device_guard" bson:"device_guard"`
+
 	// 安全信息（不直接存储到库里）
 	SafeInfo SafeInfoType `json:"safe" bson:"-"`
 
@@ -110,10 +113,25 @@ type LoginInfoType struct {
 	LoginCount uint `json:"login_count"  bson:"login_count"`
 	// LoginTime 登陆时长（秒）
 	LoginTime uint `json:"login_time"  bson:"login_time"`
-	// LastDeviceInfo 登陆时长（秒）
 	CurrentDeviceInfo string `json:"current_device_info"  bson:"current_device_info"`
-	// LastDeviceInfo 登陆时长（秒）
-	LastDeviceInfo string `json:"last_device_info"  bson:"last_device_info"`
+	LastDeviceInfo    string `json:"last_device_info"  bson:"last_device_info"`
+	FirstDeviceInfo   string `json:"first_device_info" bson:"first_device_info"`
+	FirstDeviceAt     int64  `json:"first_device_at" bson:"first_device_at"`
+	SeenDevices       []SeenDevice `json:"seen_devices" bson:"seen_devices"`
+}
+
+// SeenDevice 账号最近用过的点餐机设备号。
+type SeenDevice struct {
+	ID      string `json:"id" bson:"id"`
+	FirstAt int64  `json:"first_at" bson:"first_at"`
+	LastAt  int64  `json:"last_at" bson:"last_at"`
+	Client  string `json:"client" bson:"client"`
+}
+
+// DeviceGuard 每个账号最多 3 个白名单设备。Enabled 为 false 时不拦截。
+type DeviceGuard struct {
+	Enabled bool     `json:"enabled" bson:"enabled"`
+	Allow   []string `json:"allow" bson:"allow"`
 }
 
 type SafeInfoType struct {
