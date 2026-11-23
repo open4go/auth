@@ -69,7 +69,7 @@ func AccessMiddleware() gin.HandlerFunc {
 
 		if userID == "" {
 			baseLog.Error("Access denied: no verified identity (is middle.JWTMiddleware mounted before AccessMiddleware?)")
-			c.AbortWithStatus(http.StatusUnauthorized)
+			abortSessionExpired(c)
 			return
 		}
 
@@ -82,13 +82,13 @@ func AccessMiddleware() gin.HandlerFunc {
 		if err != nil {
 			baseLog.WithField("error", err).
 				Error("Verification error: failed to check permission for this endpoint")
-			c.AbortWithStatus(http.StatusUnauthorized)
+			abortPermissionUnavailable(c)
 			return
 		}
 
 		if !verify {
 			baseLog.Warn("Access denied: user does not have permission to access this endpoint")
-			c.AbortWithStatus(http.StatusUnauthorized)
+			abortPermissionDenied(c)
 			return
 		}
 		if !checkX6DeviceGuard(c, userID) {
