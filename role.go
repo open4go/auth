@@ -150,6 +150,16 @@ func (r *RoleManager) SignOut(ctx context.Context, accountId string) error {
 // Verify 校验账户是否有权访问 path。
 // WebSocket 接口强制按 GET 校验：具备 List 或 Read 任一即可。
 func (r *RoleManager) Verify(ctx context.Context, path string, accountId string, method string, isSingleResource bool) (bool, error) {
+	ok, err := r.VerifyAccess(ctx, path, accountId, method, isSingleResource)
+	if errors.Is(err, ErrNoRolesCached) {
+		return false, nil
+	}
+	return ok, err
+}
+
+// VerifyAccess 与 Verify 相同，但账号在缓存中没有角色时返回 ErrNoRolesCached，
+// 便于中间件区分“登录已失效”（401）与“没有权限”（403）。
+func (r *RoleManager) VerifyAccess(ctx context.Context, path string, accountId string, method string, isSingleResource bool) (bool, error) {
 	checkMethod, isWS := resolveCheckMethod(ctx, path, method)
 	p := translateHTTPMethodToPermission(checkMethod, isSingleResource)
 	if p == 0 && !isWS {
@@ -192,7 +202,7 @@ func (r *RoleManager) Verify(ctx context.Context, path string, accountId string,
 			WithField("accountId", accountId).
 			WithField("is_ws", isWS).
 			Error("Verify: account has no roles in cache (not signed in, or role cache expired)")
-		return false, nil
+		return false, ErrNoRolesCached
 	}
 
 	isCanAccess, err := r.canAccess(ctx, rolesOfThisAccount, path, p, isWS)
