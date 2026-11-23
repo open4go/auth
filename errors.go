@@ -1,24 +1,20 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 // 与 open4go/middle 的 AbortSessionExpired / AbortPermissionDenied 保持同一响应格式：
-//   - 401 code=session_expired：没有可信身份或角色缓存已失效（与 JWT 同为 24h），需要重新登录；
-//   - 403 code=permission_denied：已登录但没有该接口权限；
+//   - 401 code=session_expired：没有可信身份（JWT 未通过），需要重新登录；
+//   - 403 code=permission_denied：已登录但没有该接口权限（含账号暂无角色，避免无角色账号登录后被反复踢回登录页）；
 //   - 503 code=permission_unavailable：读角色/权限缓存出错，可重试。
 const (
 	CodeSessionExpired        = "session_expired"
 	CodePermissionDenied      = "permission_denied"
 	CodePermissionUnavailable = "permission_unavailable"
 )
-
-// ErrNoRolesCached 账号在缓存中没有角色（未登录或角色缓存已随登录过期）。
-var ErrNoRolesCached = errors.New("auth: account has no roles in cache")
 
 func abortSessionExpired(c *gin.Context) {
 	c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{

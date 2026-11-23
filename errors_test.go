@@ -47,17 +47,16 @@ func TestAccessMiddlewareDenyVsExpired(t *testing.T) {
 	}
 	rdb := GetRedisAuthHandler(ctx)
 	rdb.FlushDB(ctx)
-	t.Cleanup(func() { rdb.FlushDB(ctx) })
 
 	setCfg(t, cfgIdentitySource, "")
 	as := func(uid string) gin.HandlerFunc {
 		return func(c *gin.Context) { c.Set(VerifiedUserIDKey, uid); c.Next() }
 	}
 
-	// 角色缓存为空（随登录过期）→ 401 session_expired
+	// 账号没有角色 → 403 permission_denied（不能当登录失效，否则无角色账号会被反复踢回登录页）
 	w := httptest.NewRecorder()
 	newAccessEngine(as("u-none")).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
-	if w.Code != http.StatusUnauthorized || decodeCode(t, w) != CodeSessionExpired {
+	if w.Code != http.StatusForbidden || decodeCode(t, w) != CodePermissionDenied {
 		t.Fatalf("no roles: code=%d body=%s", w.Code, w.Body.String())
 	}
 
@@ -69,10 +68,11 @@ func TestAccessMiddlewareDenyVsExpired(t *testing.T) {
 		t.Fatalf("no permission: code=%d body=%s", w.Code, w.Body.String())
 	}
 
-	// Verify 兼容：没有角色仍返回 (false, nil)
-	rm := RoleManager{RedisPrefix: "system:auth"}
-	ok, err := rm.Verify(ctx, "/v1/x", "u-none", http.MethodGet, false)
-	if ok || err != nil {
-		t.Fatalf("Verify no roles = %v, %v; want false, nil", ok, err)
+	// redis 读失败 → 503 permission_unavailable
+	_ = rdb.Close()
+	w = httptest.NewRecorder()
+	newAccessEngine(as("u-1")).ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/v1/x", nil))
+	if w.Code != http.StatusServiceUnavailable || decodeCode(t, w) != CodePermissionUnavailable {
+		t.Fatalf("redis down: code=%d body=%s", w.Code, w.Body.String())
 	}
 }

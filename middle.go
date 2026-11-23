@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
@@ -79,12 +78,7 @@ func AccessMiddleware() gin.HandlerFunc {
 		}
 
 		ctx := withWSFlag(c.Request.Context(), isWS)
-		verify, err := roleManager.VerifyAccess(ctx, fullPath, userID, method, isSingleResource)
-		if errors.Is(err, ErrNoRolesCached) {
-			baseLog.Warn("Access denied: no roles cached for account, session expired")
-			abortSessionExpired(c)
-			return
-		}
+		verify, err := roleManager.Verify(ctx, fullPath, userID, method, isSingleResource)
 		if err != nil {
 			baseLog.WithField("error", err).
 				Error("Verification error: failed to check permission for this endpoint")
